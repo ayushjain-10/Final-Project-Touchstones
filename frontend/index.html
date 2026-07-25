@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FAF7F1" />
+
+    <!-- Marketing/visitor trackers (GA, Apollo, Leadsy) — CONSENT-GATED (S-7, codebase-scan).
+         Public client-side IDs, not secrets. These load ONLY after the visitor accepts the cookie
+         banner (localStorage ts_cookie_consent==='accepted'), matching the banner's promise and how
+         Mixpanel is gated. window.__loadTouchstonesTrackers() is idempotent + hostname-gated inside;
+         it runs here if consent was given on a prior visit, and CookieConsent calls it on Accept. -->
+    <script>
+      window.__loadTouchstonesTrackers = function () {
+        if (window.__ttTrackersLoaded) return;
+        var h = location.hostname;
+        var isProdMarketing = (h === 'touchstones.ai' || h === 'www.touchstones.ai' || h === 'app.touchstones.ai');
+        var isAppHost = isProdMarketing || h === 'touchstone-app.vercel.app';
+        if (!isAppHost) return; // never on localhost / other dev hosts
+        window.__ttTrackersLoaded = true;
+
+        // Google Analytics (marketing + live app)
+        var GA_ID = 'G-19VKZN4F0F';
+        var ga = document.createElement('script');
+        ga.async = true;
+        ga.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+        document.head.appendChild(ga);
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        window.gtag = gtag;
+        gtag('js', new Date());
+        gtag('config', GA_ID);
+
+        // Apollo + Leadsy are registered to the touchstones.ai domains only (they CORS/400 on
+        // the vercel.app alias), so keep them to those hosts.
+        if (isProdMarketing) {
+          var n = Math.random().toString(36).substring(7);
+          var apollo = document.createElement('script');
+          apollo.src = 'https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=' + n;
+          apollo.async = true; apollo.defer = true;
+          apollo.onload = function () { window.trackingFunctions && window.trackingFunctions.onLoad({ appId: '6a4137bb875233001ccd30a6' }); };
+          document.head.appendChild(apollo);
+
+          var leadsy = document.createElement('script');
+          leadsy.id = 'vtag-ai-js';
+          leadsy.async = true;
+          leadsy.src = 'https://r2.leadsy.ai/tag.js';
+          leadsy.setAttribute('data-pid', '1brZT6CBFAdqnmL1');
+          leadsy.setAttribute('data-version', '062024');
+          document.head.appendChild(leadsy);
+        }
+      };
+      try {
+        if (localStorage.getItem('ts_cookie_consent') === 'accepted') window.__loadTouchstonesTrackers();
+      } catch (e) { /* storage blocked → no tracking, fail safe */ }
+    </script>
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <title>Touchstones | See the work behind the answer</title>
+    <meta
+      name="description"
+      content="Role-specific engineering work screens with explicit AI policies, rubric-linked evidence, and human review. No identity matching or automated hiring decisions."
+    />
+
+    <!-- Open Graph / social cards -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Touchstones" />
+    <meta property="og:url" content="https://touchstones.ai/" />
+    <meta property="og:title" content="Touchstones | See the work behind the answer" />
+    <meta
+      property="og:description"
+      content="Role-specific engineering work screens with explicit AI policies, rubric-linked evidence, and human review."
+    />
+    <meta property="og:image" content="https://touchstones.ai/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Touchstones | See the work behind the answer" />
+    <meta
+      name="twitter:description"
+      content="Role-specific engineering work screens with explicit AI policies, rubric-linked evidence, and human review."
+    />
+    <meta name="twitter:image" content="https://touchstones.ai/og.png" />
+
+    <!-- Editorial serif (Fraunces) + grotesque body (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

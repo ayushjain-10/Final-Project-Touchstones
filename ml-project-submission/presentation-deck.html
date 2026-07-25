@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Touchstones - ML Project Presentation</title>
+<style>
+  @page { size: 13.333in 7.5in; margin: 0; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: "Helvetica Neue", Arial, system-ui, sans-serif; color: #1c1917; }
+  .slide {
+    width: 13.333in; height: 7.5in; padding: 0.6in 0.75in; position: relative;
+    page-break-after: always; background: #FBF7F1; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .slide:last-child { page-break-after: auto; }
+  .kicker { font-size: 13pt; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #B4552D; }
+  h1 { font-family: Georgia, serif; font-size: 40pt; line-height: 1.08; margin: 0.08in 0 0.12in; color:#1c1917; }
+  h2 { font-family: Georgia, serif; font-size: 30pt; line-height: 1.1; margin: 0.05in 0 0.14in; color:#1c1917; }
+  .lead { font-size: 18pt; line-height: 1.4; color: #44403c; max-width: 10in; }
+  ul { font-size: 17pt; line-height: 1.5; color: #292524; margin: 0.06in 0; padding-left: 0.32in; }
+  li { margin-bottom: 0.09in; }
+  li b { color:#7a3d22; }
+  .foot { position: absolute; bottom: 0.34in; left: 0.75in; right: 0.75in; display:flex; justify-content:space-between; font-size: 10.5pt; color: #9a8f84; border-top:1px solid #e7ddd1; padding-top:6px; }
+  .fig { flex:1; display:flex; align-items:center; justify-content:center; gap: 0.4in; }
+  .fig img { max-height: 4.3in; max-width: 100%; border:1px solid #ece7e0; border-radius:6px; background:#fff; }
+  .cols { display:flex; gap:0.5in; align-items:flex-start; }
+  .col { flex:1; }
+  .big { font-family: Georgia, serif; font-size: 46pt; color:#B4552D; line-height:1; }
+  .stat { display:flex; gap:0.5in; margin-top:0.15in; }
+  .stat .n { font-family:Georgia,serif; font-size:34pt; color:#B4552D; line-height:1; }
+  .stat .l { font-size:12.5pt; color:#57534e; max-width:2.6in; margin-top:4px; }
+  .chip { display:inline-block; background:#f1e7de; color:#7a3d22; border-radius:999px; padding:2px 12px; font-size:12pt; font-weight:600; margin-right:6px; }
+  .title-wrap { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo .mark { width:34px; height:34px; border-radius:9px; background:#B4552D; color:#fff; font-family:Georgia,serif; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:20px;}
+  .note { font-size:12.5pt; color:#78716c; margin-top:0.1in; }
+  .card { border:1px solid #e7ddd1; border-radius:10px; padding:0.2in 0.26in; background:#fff; }
+  .caption { font-size:11pt; color:#78716c; margin-top:6px; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- 1 — Title -->
+<section class="slide">
+  <div class="logo"><span class="mark">^</span><span style="font-family:Georgia,serif;font-weight:700;font-size:16pt;">Touchstones</span></div>
+  <div class="title-wrap">
+    <div class="kicker">Machine Learning &middot; Final Project</div>
+    <h1>Verified real-work screening<br>for engineering hiring in the AI era</h1>
+    <p class="lead">Real work. Real person. Provable. One explainable, audit-ready score - with AI use allowed, not policed.</p>
+    <p class="note">Ayush Jain &middot; Christoph Dittrich &middot; Mark Garvin Jeyaraj &nbsp;|&nbsp; Northeastern University</p>
+  </div>
+  <div class="foot"><span>Touchstones</span><span>1</span></div>
+</section>
+
+<!-- 2 — Problem -->
+<section class="slide">
+  <div class="kicker">The problem</div>
+  <h2>Generative AI broke the coding screen</h2>
+  <ul>
+    <li>Puzzle interviews are solved instantly by an LLM - a passing score no longer signals the <b>candidate's</b> ability.</li>
+    <li>"AI-detection" is an unwinnable arms race: high false positives punish honest candidates and destroy trust.</li>
+    <li>Pipelines flood with indistinguishable applicants; scarce <b>senior-engineer time</b> is wasted on the wrong people.</li>
+  </ul>
+  <p class="lead" style="margin-top:0.15in;"><b style="color:#7a3d22;">Our bet:</b> stop detecting AI. Measure real, role-specific work <em>with AI allowed</em>, and turn it into a reliable, explainable signal.</p>
+  <div class="foot"><span>Why it matters</span><span>2</span></div>
+</section>
+
+<!-- 3 — Related work -->
+<section class="slide">
+  <div class="kicker">Related work</div>
+  <h2>What exists, and where we differ</h2>
+  <div class="cols" style="margin-top:0.1in;">
+    <div class="col card">
+      <b style="font-size:15pt;color:#7a3d22;">Industry</b>
+      <ul style="font-size:15pt;">
+        <li>Auto-graded platforms (HackerRank, Codility) - the puzzle screens AI undermined.</li>
+        <li>AI-proctoring / detection vendors - surveillance + brittle classifiers.</li>
+      </ul>
+    </div>
+    <div class="col card">
+      <b style="font-size:15pt;color:#7a3d22;">Research we build on</b>
+      <ul style="font-size:15pt;">
+        <li><b>LLM-as-a-judge</b> (Zheng et al., MT-Bench, NeurIPS 2023): judges agree with humans about as often as humans agree with each other.</li>
+        <li><b>HumanEval</b> (Chen et al., 2021): execution as objective ground truth for code.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:0.16in;">We take the LLM-judge idea but <b style="color:#7a3d22;">remove the score from the model's control</b> and ground correctness in execution.</p>
+  <div class="foot"><span>Related work</span><span>3</span></div>
+</section>
+
+<!-- 4 — Data & features -->
+<section class="slide">
+  <div class="kicker">Data &amp; features</div>
+  <h2>Inputs, and how we test without real outcomes</h2>
+  <ul>
+    <li><b>Live inputs:</b> a messy work sample (code + rationale) &middot; a versioned rubric &middot; server-side behavioral signals (typed-vs-pasted, edit timing, tab-focus) &middot; recruiter-reported outcomes (advanced/offer/hired/retained). No biometrics.</li>
+    <li><b>Scorer-validity corpus:</b> 200 execution-labeled programs from HumanEval - 100 correct, 100 systematically mutated (boundary flips, off-by-one, subtle LLM bugs).</li>
+    <li><b>The cold-start problem:</b> outcome labels are exactly what a new customer lacks. So we drive the two evaluations with <b>seeded Monte-Carlo simulation</b> - reproducible, and it sweeps the data-scarcity axis directly.</li>
+  </ul>
+  <div class="foot"><span>Data &amp; features</span><span>4</span></div>
+</section>
+
+<!-- 5 — Methods -->
+<section class="slide">
+  <div class="kicker">Methods</div>
+  <h2>Hybrid scorer + two statistical guarantees</h2>
+  <ul>
+    <li><b>Scoring (LLM-as-judge, code tally):</b> the model emits only per-criterion points + evidence; <b>our code</b> computes the 0-100 score. Injection can't move arithmetic. K=3 self-consistency; correctness grounded in execution; every decision hash-chained.</li>
+    <li><b>Cold-start calibration:</b> a Beta-Binomial (empirical-Bayes) posterior shrinks a band's rate toward a documented prior; tiered <span class="chip">prior</span><span class="chip">provisional</span><span class="chip">calibrated</span> with a 90% credible interval that narrows as data arrives.</li>
+    <li><b>Subgroup fairness:</b> EEOC four-fifths (80%) rule on opt-in labels - run on synthetic cohorts now, before real data.</li>
+  </ul>
+  <div class="foot"><span>Methods &amp; algorithms</span><span>5</span></div>
+</section>
+
+<!-- 6 — Results: cold start -->
+<section class="slide">
+  <div class="kicker">Results &middot; 1 of 2</div>
+  <h2>Calibration that works from day one</h2>
+  <div class="fig">
+    <div style="flex:1.3;"><img src="figures/coldstart-accuracy.svg" alt="cold-start accuracy"><div class="caption">Shrinkage vs. raw rate as labels accrue (4,000 trials/band).</div></div>
+    <div style="flex:1;">
+      <div class="stat"><div><div class="n">-56.6%</div><div class="l">error when labels are scarce (MAE 20.1 &rarr; 8.7 pp)</div></div></div>
+      <div class="stat"><div><div class="n">100%</div><div class="l">available vs. 0% for the raw band below the floor</div></div></div>
+      <div class="stat"><div><div class="n">95.1%</div><div class="l">90% credible-interval coverage (honest uncertainty)</div></div></div>
+    </div>
+  </div>
+  <div class="foot"><span>Results - cold start</span><span>6</span></div>
+</section>
+
+<!-- 7 — Results: fairness -->
+<section class="slide">
+  <div class="kicker">Results &middot; 2 of 2</div>
+  <h2>Subgroup fairness, checked early</h2>
+  <div class="fig">
+    <div style="flex:1.4;"><img src="figures/fairness-fourfifths.svg" alt="four-fifths"><div class="caption">Impact ratio by subgroup; 0.80 four-fifths threshold.</div></div>
+    <div style="flex:1;">
+      <ul style="font-size:16pt;">
+        <li><b>Blind scorer passes:</b> every subgroup &ge; 0.80 (min 0.87).</li>
+        <li><b>Injected bias is caught:</b> penalized group flagged at 0.35.</li>
+        <li><b>Privacy floor holds:</b> a 3-person group is suppressed, not exposed.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>Results - fairness</span><span>7</span></div>
+</section>
+
+<!-- 8 — Demo -->
+<section class="slide">
+  <div class="kicker">Demo</div>
+  <h2>The working application</h2>
+  <div class="fig" style="gap:0.3in;">
+    <img src="figures/demo-features.png" alt="demo" style="max-height:4.5in;">
+  </div>
+  <p class="caption" style="text-align:center;font-size:12.5pt;">Live at <b>/demo/features</b>: the real calibration badge sharpening from prior &rarr; provisional &rarr; calibrated, and the fairness panel (blind passes, biased flagged).</p>
+  <div class="foot"><span>Demo</span><span>8</span></div>
+</section>
+
+<!-- 9 — Close -->
+<section class="slide">
+  <div class="kicker">What we learned &amp; what's next</div>
+  <h2>Take-aways</h2>
+  <ul>
+    <li><b>One decision drove everything:</b> never let the model produce the number. Auditability, reproducibility, injection-resistance, and testability all follow.</li>
+    <li><b>"Not enough data" is a quantity, not a switch:</b> report a shrunk estimate with an interval, and fairness can be checked before the first real candidate.</li>
+    <li><b>Next:</b> hierarchical priors that pool across roles; scorer-human agreement on a public corpus; live four-fifths alerting.</li>
+  </ul>
+  <p class="lead" style="margin-top:0.14in;"><b style="color:#7a3d22;">710 tests green.</b> Code: github.com/ayushjain-10/touchstone</p>
+  <div class="foot"><span>Thank you</span><span>9</span></div>
+</section>
+
+</body>
+</html>

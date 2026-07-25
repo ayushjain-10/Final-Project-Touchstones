@@ -1,0 +1,5 @@
+# The gold set contains candidate response text — regenerate it from the dev DB,
+# never commit it. (Project rule: never persist candidate media/transcripts to VCS.)
+gold-set.json
+training-set.jsonl
+*.results.json

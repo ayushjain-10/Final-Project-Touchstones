@@ -1,0 +1,76 @@
+# Render Blueprint — Touchstones backend (persistent web service; scoring needs a
+# long-lived server, not serverless). Deploy via the Render Dashboard:
+#   New → Blueprint → connect the GitHub repo (ayushjain-10/touchstone) → Apply.
+# Render reads this file and creates the "touchstone-api" service.
+# Secrets are `sync: false` — set them in the dashboard or via the Render API
+# (never commit real secrets to this file).
+services:
+  - type: web
+    name: touchstone-api
+    runtime: node
+    region: ohio            # us-east, closest to the Supabase us-east-1 project
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start  # node src/app.js (polyfill handles Node compat in-code)
+    healthCheckPath: /health/live
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: USE_SUPABASE
+        value: "true"
+      - key: USE_MOCK_DB
+        value: "false"
+      - key: USE_PG_CRON
+        value: "false"
+      - key: USE_SCORING_QUEUE
+        value: "false"
+      - key: AI_LLM_MODEL
+        value: claude-haiku-4-5
+      - key: ENABLE_LIVENESS
+        value: "false"
+      - key: ENABLE_AUTOPILOT
+        value: "false"   # autopilot follow-up service references a column not in the new schema; off for MVP
+      - key: ENABLE_SOURCING
+        value: "false"
+      # ── secrets (set in dashboard / via API) ──
+      - key: FRONTEND_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      # Resend audience sync (all users + waitlist -> Resend contact list). AUDIENCE_API_KEY needs
+      # audience perms (the send-only RESEND_API_KEY can't manage contacts); falls back to it if unset.
+      - key: RESEND_AUDIENCE_ID
+        sync: false
+      - key: RESEND_AUDIENCE_API_KEY
+        sync: false
+      # Shared secret for the Supabase Database Webhook -> /api/hooks/resend-signup
+      - key: SUPABASE_WEBHOOK_SECRET
+        sync: false

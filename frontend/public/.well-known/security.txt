@@ -1,0 +1,11 @@
+# Touchstones - responsible disclosure
+# https://securitytxt.org/
+Contact: mailto:security@touchstones.ai
+Contact: mailto:ayush@touchstones.ai
+Expires: 2027-06-27T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://touchstones.ai/.well-known/security.txt
+Policy: https://touchstones.ai/trust
+
+# We welcome reports of security issues. Please give us a reasonable window to
+# remediate before public disclosure. Do not access or modify other users' data.

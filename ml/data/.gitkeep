@@ -1,0 +1,3 @@
+# Place the Kaggle UpdatedResumeDataSet.csv here (columns: Category, Resume).
+# Download: https://www.kaggle.com/datasets/gauravduttakiit/resume-dataset
+# Without it, run with --sample to use ml/sample_resumes.csv.

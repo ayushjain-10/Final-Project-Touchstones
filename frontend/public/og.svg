@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#FAF7F1"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#4358D0"/>
+  <!-- Decorative score ring with no number. Illustrative only. -->
+  <g transform="translate(965,300)">
+    <circle r="150" fill="none" stroke="#E7DDCF" stroke-width="22"/>
+    <g transform="rotate(-90)">
+      <circle r="150" fill="none" stroke="#4358D0" stroke-width="22" stroke-linecap="round"
+              stroke-dasharray="942" stroke-dashoffset="235"/>
+    </g>
+    <circle cx="0" cy="-150" r="11" fill="#4358D0"/>
+  </g>
+  <text x="90" y="118" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" letter-spacing="6" fill="#4358D0">TOUCHSTONES</text>
+  <text x="86" y="262" font-family="'Fraunces','Georgia',serif" font-size="90" font-weight="600" fill="#221E18">See the work</text>
+  <text x="86" y="360" font-family="'Fraunces','Georgia',serif" font-size="90" font-weight="600" fill="#221E18">behind the</text>
+  <text x="86" y="458" font-family="'Fraunces','Georgia',serif" font-size="90" font-weight="600" fill="#4358D0">answer.</text>
+  <text x="90" y="528" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="29" fill="#6A5D4D">Rubric-linked work evidence for engineering hiring.</text>
+  <text x="90" y="592" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="22" fill="#A99A85">touchstones.ai</text>
+</svg>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Touchstones product demos</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:transparent;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+  #wrap{width:100%;}
+  #tabsbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .tab{position:relative;border:0.5px solid #E7DDCF;background:#fff;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:500;color:#6A5D4D;cursor:pointer;overflow:hidden;transition:color .2s,border-color .2s;}
+  .tab.on{border-color:#C8CEFA;color:#27389E;}
+  .tab i{position:absolute;left:0;bottom:0;height:2.5px;width:0;background:#4358D0;display:block;}
+  #stage{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:0.5px solid #E7DDCF;border-radius:16px;background:#FCF9F3;box-shadow:0 24px 60px -24px rgba(34,30,24,0.28);}
+  .pan{position:absolute;inset:0;overflow:hidden;opacity:0;transition:opacity .5s ease;pointer-events:none;}
+  .pan.on{opacity:1;pointer-events:auto;}
+  .pan img{position:absolute;top:0;left:0;width:100%;height:auto;display:block;transform:translateY(0);will-change:transform;}
+  #capbar{position:absolute;left:16px;bottom:16px;z-index:5;display:inline-flex;align-items:center;gap:8px;max-width:calc(100% - 32px);
+    background:rgba(34,30,24,0.82);color:#F7F1E7;font-size:14px;font-weight:500;padding:9px 15px;border-radius:10px;backdrop-filter:blur(4px);}
+  #capbar .dot{width:7px;height:7px;border-radius:50%;background:#9DA9EF;flex-shrink:0;}
+  @media (max-width:640px){.tab{padding:8px 12px;font-size:12.5px;}#capbar{font-size:12px;}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="tabsbar">
+    <button class="tab on" data-i="0">Create a screen<i></i></button>
+    <button class="tab" data-i="1">Candidate portal<i></i></button>
+    <button class="tab" data-i="2">Score report<i></i></button>
+    <button class="tab" data-i="3">Recruiter dashboard<i></i></button>
+  </div>
+  <div id="stage">
+    <div class="pan on" data-i="0"><img src="./shots/create.png" alt="Create a verified real-work screen" loading="eager"></div>
+    <div class="pan" data-i="1"><img src="./shots/candidate.png" alt="Candidate portal" loading="lazy"></div>
+    <div class="pan" data-i="2"><img src="./shots/report.png" alt="Score report with a session integrity record" loading="lazy"></div>
+    <div class="pan" data-i="3"><img src="./shots/dashboard.png" alt="Recruiter dashboard" loading="lazy"></div>
+    <div id="capbar"><span class="dot"></span><span id="cap">Author a role-specific, AI-allowed screen from a template.</span></div>
+  </div>
+</div>
+<script>
+(function(){
+  var stage=document.getElementById('stage');
+  var tabs=Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var pans=Array.prototype.slice.call(document.querySelectorAll('.pan'));
+  var cap=document.getElementById('cap');
+  var CAPS=[
+    'Author a role-specific, AI-allowed screen from a template.',
+    'Candidates work in a calm portal, private to them. AI is allowed.',
+    'Rubric-linked evidence with a code-calculated weighted total and session record.',
+    'Every screen and result, tracked in one place.'
+  ];
+  var DUR=[6500,6000,7800,6800];
+  var i=0, adv=null;
+  var reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  function panDist(img){
+    if(!img.naturalWidth) return 0;
+    var renderedH=img.naturalHeight*(stage.clientWidth/img.naturalWidth);
+    var range=renderedH-stage.clientHeight;
+    return Math.max(0, Math.min(range, stage.clientHeight*1.55));
+  }
+  function startPan(n){
+    var img=pans[n].querySelector('img');
+    img.style.transition='none';
+    img.style.transform='translateY(0)';
+    // next frame: animate to the reveal position over most of the tab's dwell
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        var d=panDist(img);
+        img.style.transition='transform '+(DUR[n]-700)+'ms linear';
+        img.style.transform='translateY(-'+d+'px)';
+      });
+    });
+  }
+  function activate(n){
+    if(adv){clearTimeout(adv);adv=null;}
+    i=n;
+    pans.forEach(function(p,k){p.classList.toggle('on',k===n);});
+    tabs.forEach(function(t,k){t.classList.toggle('on',k===n);var f=t.querySelector('i');f.style.transition='none';f.style.width='0';});
+    cap.textContent=CAPS[n];
+    if(reduced){var im=pans[n].querySelector('img');im.style.transition='none';im.style.transform='translateY(0)';return;}
+    startPan(n);
+    var fill=tabs[n].querySelector('i');
+    requestAnimationFrame(function(){fill.style.transition='width '+DUR[n]+'ms linear';fill.style.width='100%';});
+    adv=setTimeout(function(){activate((n+1)%pans.length);},DUR[n]);
+  }
+  tabs.forEach(function(t){t.addEventListener('click',function(){activate(+t.getAttribute('data-i'));});});
+  // Recompute the current pan if the window resizes or the active image finishes loading.
+  window.addEventListener('resize',function(){if(!reduced)startPan(i);});
+  pans.forEach(function(p){p.querySelector('img').addEventListener('load',function(){if(!reduced&&pans[i]===p)startPan(i);});});
+  activate(0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Touchstones — robots.txt
+User-agent: *
+Allow: /
+# Authenticated product + token/candidate surfaces aren't for indexing
+Disallow: /app/
+Disallow: /login
+Disallow: /reset-password
+Disallow: /candidate
+Disallow: /probe/
+Disallow: /apply/
+Disallow: /passport/
+Disallow: /verify/
+
+Sitemap: https://touchstones.ai/sitemap.xml

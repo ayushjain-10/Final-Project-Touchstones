@@ -1,0 +1,44 @@
+{
+  "name": "@touchstones/verify",
+  "version": "1.0.0",
+  "description": "Official SDK for the Touchstones Verify API — embed proof-of-human + skill verification into your platform.",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    },
+    "./webhooks": {
+      "types": "./webhooks.d.ts",
+      "import": "./webhooks.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "webhooks.js",
+    "webhooks.d.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "touchstones",
+    "verify",
+    "proof-of-human",
+    "hiring",
+    "assessment",
+    "verification"
+  ],
+  "license": "MIT",
+  "homepage": "https://touchstones.ai/platforms",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayushjain-10/touchstone"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false
+}

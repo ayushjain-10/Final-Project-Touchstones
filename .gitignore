@@ -1,0 +1,119 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Ephemeral audit/review scratch — may hold tokens; never commit
+.tmpaudit/
+
+# Production
+build/
+dist/
+out/
+
+# Misc
+.DS_Store
+
+# Secrets — ignore ALL .env files (including Finder-duplicate names like .env 2), keep only the committed *.env.example templates.
+.env
+.env.*
+.env[ ]*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.p12
+secrets.json
+service-account*.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Backend specific
+backend/uploads/*
+!backend/uploads/.gitkeep
+.vercel
+
+# Local agent / MCP config (may contain tokens) — never commit
+.mcp.json
+.claude/
+.playwright-mcp/
+
+# Office temp lock files
+~$*
+
+# Stray screenshots / images at repo root
+/*.png
+/*.jpeg
+/*.jpg
+
+# ML study artifacts
+ml/results/
+ml/.cache_llm.json
+ml/data/*.csv
+
+# CI / test artifacts
+test-results/
+playwright-report/
+junit.xml
+*.tsbuildinfo
+
+# Internal strategy / GTM / competitor research + prospect data — NOT committed.
+TODO/
+*.xlsx
+*.eml
+.~lock.*#
+
+# Internal strategy / competitive research / code-review — kept OUT of the public repo
+# (re-add with: git add -f docs/<file> if you want any of these public)
+docs/RESEARCH-2026-06.md
+docs/REVIEW-2026-06.md
+docs/STRATEGY.md
+docs/tools-research.md
+docs/SYSTEM_DESIGN.md
+.serena/
+
+# --- Business / fundraising / GTM materials + prospect data (not code) ---
+/data-room/
+/yc/
+/gtm-outreach/
+/instagram/
+/ml/
+/Touchstones-*.pdf
+/Touchstones-*.pptx
+/Touchstones-*.pptx.pdf
+/Touchstones-*.docx
+/Touchstones-*.md
+/touchstones_*.csv
+
+# --- Generated knowledge graph (regenerate with: graphify update .) ---
+/graphify-out/
+
+# --- Local AI tooling configs (may reference project ids / keys) ---
+/.codex/
+/config.yaml

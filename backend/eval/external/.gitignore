@@ -1,0 +1,8 @@
+# Generated eval artifacts + downloaded datasets — regenerate locally, never commit.
+HumanEval.jsonl.gz
+corpus.jsonl
+corpus-wave2.jsonl
+.wave2-llm-cache.json
+*.report.json
+*.report.txt
+grader-matrix-results.jsonl

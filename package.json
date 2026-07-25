@@ -1,0 +1,50 @@
+{
+    "name": "touchstone-monorepo",
+    "version": "1.0.0",
+    "private": true,
+    "engines": {
+        "node": "24.x"
+    },
+    "scripts": {
+        "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+        "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
+        "start": "cd backend && npm start",
+        "test": "playwright test --project=e2e",
+        "test:dev": "playwright test --project=dev",
+        "test:prod": "playwright test --project=prod",
+        "test:mobile": "playwright test --project=mobile",
+        "test:e2e": "playwright test tests/e2e",
+        "test:api": "playwright test tests/e2e/api.spec.js",
+        "test:status": "playwright test tests/e2e/status.spec.js",
+        "test:backend": "cd backend && npm test",
+        "test:all": "npm run test:backend && npm run test:e2e",
+        "test:report": "playwright show-report test-results/html-report",
+        "monitor": "node scripts/monitor.js",
+        "monitor:verbose": "node scripts/monitor.js --verbose",
+        "health": "curl -s http://localhost:3001/api/status/health | node -e \"const s=require('fs').readFileSync(0,'utf8');const d=JSON.parse(s);console.log(d.healthy?'✅ Healthy':'❌ Unhealthy');\""
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.57.0"
+    },
+    "description": "Touchstones — verified real-work screening for engineering hiring. Real work. Real person. Provable. A short, AI-allowed work sample scored in code from a rubric, tied to server-attributed proof-of-human, returning one explainable, audit-ready score.",
+    "main": "cors-test.js",
+    "directories": {
+        "test": "tests"
+    },
+    "dependencies": {
+        "playwright": "^1.57.0",
+        "playwright-core": "^1.57.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ayushjain-10/touchstone.git"
+    },
+    "keywords": ["hiring", "technical-screening", "proof-of-work", "ai", "supabase"],
+    "author": "",
+    "license": "UNLICENSED",
+    "type": "commonjs",
+    "bugs": {
+        "url": "https://github.com/ayushjain-10/touchstone/issues"
+    },
+    "homepage": "https://github.com/ayushjain-10/touchstone#readme"
+}

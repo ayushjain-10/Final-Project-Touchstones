@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dot field preview</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: #FBF8F3; font-family: -apple-system, system-ui, sans-serif; }
+  .hero { position: relative; overflow: hidden; height: 100vh; }
+  .wash {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(58% 48% at 82% -5%, rgba(111,78,55,0.12), transparent 60%),
+      radial-gradient(48% 40% at -5% 15%, rgba(194,138,46,0.07), transparent 55%);
+  }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  .content { position: relative; z-index: 10; max-width: 720px; margin: 0 auto; padding: 12vh 24px; }
+  h1 { font-size: 3.4rem; line-height: 1.05; color: #221E18; font-weight: 600; letter-spacing: -0.02em; }
+  p { font-size: 1.15rem; color: #6b6257; max-width: 34rem; }
+  .hint { margin-top: 2rem; font-size: 0.85rem; color: #9e3528; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="hero" id="hero">
+    <canvas id="dots"></canvas>
+    <div class="wash"></div>
+    <div class="content">
+      <h1>Screen engineers with work you can verify.</h1>
+      <p>Move your cursor across the background. The dots repel and pop toward you.</p>
+      <div class="hint">← preview of the hero DotField interaction →</div>
+    </div>
+  </div>
+<script>
+const SPACING = 26, DOT_RADIUS = 1.5, RADIUS = 130, PUSH = 26, EASE = 0.12;
+const BASE = 'rgba(34, 30, 24, 0.16)';
+const hero = document.getElementById('hero');
+const canvas = document.getElementById('dots');
+const ctx = canvas.getContext('2d');
+let dots = [], dpr = Math.min(window.devicePixelRatio || 1, 2);
+const mouse = { x: -9999, y: -9999, active: false };
+
+function build() {
+  const w = hero.clientWidth, h = hero.clientHeight;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  dots = [];
+  for (let y = SPACING/2; y < h; y += SPACING)
+    for (let x = SPACING/2; x < w; x += SPACING)
+      dots.push({ ox:x, oy:y, x, y, scale:1, glow:0 });
+}
+function draw() {
+  const w = hero.clientWidth, h = hero.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const { x:mx, y:my, active } = mouse;
+  for (const d of dots) {
+    let tx=d.ox, ty=d.oy, ts=1, tg=0;
+    if (active) {
+      const dx=d.ox-mx, dy=d.oy-my, dist=Math.hypot(dx,dy);
+      if (dist < RADIUS) {
+        const f = 1 - dist/RADIUS, fo = f*f, ang = Math.atan2(dy,dx);
+        tx = d.ox + Math.cos(ang)*PUSH*fo;
+        ty = d.oy + Math.sin(ang)*PUSH*fo;
+        ts = 1 + fo*2.6; tg = fo;
+      }
+    }
+    d.x += (tx-d.x)*EASE; d.y += (ty-d.y)*EASE;
+    d.scale += (ts-d.scale)*EASE; d.glow += (tg-d.glow)*EASE;
+    ctx.fillStyle = d.glow > 0.01 ? `rgba(158,53,40,${0.16 + d.glow*0.7})` : BASE;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, DOT_RADIUS*d.scale, 0, Math.PI*2);
+    ctx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+hero.addEventListener('pointermove', e => {
+  const r = hero.getBoundingClientRect();
+  mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.active = true;
+});
+hero.addEventListener('pointerleave', () => mouse.active = false);
+new ResizeObserver(build).observe(hero);
+build(); requestAnimationFrame(draw);
+</script>
+</body>
+</html>

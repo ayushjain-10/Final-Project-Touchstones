@@ -1,0 +1,16 @@
+# Build context for backend/Dockerfile is the repo root; whitelist only what
+# the image needs (backend + emails), then strip secrets/dev-only weight.
+*
+!backend/**
+!emails/**
+backend/.env
+backend/.env.*
+backend/node_modules
+backend/npm-debug.log
+backend/coverage
+backend/tests
+backend/eval
+backend/uploads
+backend/start-render.sh
+emails/preview
+**/.DS_Store

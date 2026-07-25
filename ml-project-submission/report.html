@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Touchstones: Verified Real-Work Screening for Engineering Hiring in the AI Era</title>
+<style>
+  @page { size: letter; margin: 0.85in 0.9in; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt; line-height: 1.28; color: #1c1917; margin: 0;
+    text-rendering: optimizeLegibility;
+  }
+  h1 { font-size: 18pt; line-height: 1.15; margin: 0 0 2pt; text-align: center; }
+  .sub { text-align: center; font-style: italic; color: #44403c; font-size: 10.5pt; margin: 0 0 2pt; }
+  .authors { text-align: center; font-size: 10.5pt; margin: 6pt 0 2pt; }
+  .affil { text-align: center; font-size: 9.5pt; color: #57534e; margin: 0 0 10pt; }
+  h2 { font-size: 12pt; margin: 13pt 0 3pt; border-bottom: 1.2px solid #C0603A; padding-bottom: 2pt; color:#7a3d22; }
+  h3 { font-size: 10.8pt; margin: 8pt 0 2pt; color:#1c1917; }
+  p { margin: 0 0 5pt; text-align: justify; }
+  .abstract { font-size: 10pt; margin: 4pt 2em 8pt; padding: 7pt 12pt; background: #faf6f1; border-left: 3px solid #C0603A; }
+  .abstract p { text-align: justify; }
+  figure { margin: 8pt 0; text-align: center; page-break-inside: avoid; }
+  figure img { width: 100%; max-width: 6.4in; border: 1px solid #ece7e0; border-radius: 4px; }
+  figure.screenshot img { max-width: 5.3in; }
+  figcaption { font-size: 8.8pt; color: #57534e; margin-top: 3pt; text-align: left; }
+  table { border-collapse: collapse; width: 100%; font-size: 9.2pt; margin: 6pt 0; }
+  th, td { border: 1px solid #ded7cd; padding: 3pt 6pt; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { background: #f3ede5; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background:#f5f1ea; padding:0 2px; border-radius:3px; }
+  .mono-block { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.4pt; line-height:1.32; background:#faf7f2; border:1px solid #ece7e0; border-radius:4px; padding:7pt 9pt; white-space:pre-wrap; margin:4pt 0 7pt; }
+  ol.refs { font-size: 9.2pt; padding-left: 1.4em; line-height:1.3; }
+  ol.refs li { margin-bottom: 2.5pt; }
+  .two { column-count: 2; column-gap: 16pt; }
+  .kv { font-size: 9.5pt; }
+  .small { font-size: 9.3pt; color:#44403c; }
+  ul.tight { margin: 2pt 0 6pt; padding-left: 1.2em; }
+  ul.tight li { margin-bottom: 2pt; text-align: justify; }
+  .nobreak { page-break-inside: avoid; }
+  hr.sec { border:0; border-top:1px solid #e7e0d6; margin:10pt 0; }
+</style>
+</head>
+<body>
+
+<h1>Touchstones: Verified Real-Work Screening for Engineering Hiring in the AI Era</h1>
+<p class="sub">Machine Learning - Final Project Report</p>
+<p class="authors"><strong>Ayush Jain</strong> (M.S. Computer Science) &nbsp;&middot;&nbsp; <strong>Christoph Dittrich</strong> (M.S. Computer Science) &nbsp;&middot;&nbsp; <strong>Mark Garvin Jeyaraj</strong> (M.S. Data Science)</p>
+<p class="affil">Northeastern University &nbsp;&middot;&nbsp; July 2026 &nbsp;&middot;&nbsp; Code: github.com/ayushjain-10/touchstone</p>
+
+<div class="abstract">
+<p><strong>Abstract.</strong> Generative AI has broken traditional technical screening: candidates solve puzzle-style interviews with large language models (LLMs), and AI "detectors" are an unwinnable arms race. Rather than detect AI, Touchstones <em>measures real, role-specific work with AI explicitly allowed</em> and turns it into a single explainable, audit-ready hiring signal. An LLM grades a messy work sample against a rubric and emits only per-criterion points; the 0&ndash;100 score is then computed deterministically in our code, which resists prompt injection and is reproducible. A calibration layer maps scores to per-role percentiles and outcome-calibrated bands, and every decision is bound to a tamper-evident, hash-chained audit log with a behavioral, non-biometric proof-of-human signal. This report focuses on two properties an operator must trust before any real outcome data exists, both raised in our proposal feedback: (i) <strong>calibration under cold start</strong> and (ii) <strong>subgroup fairness</strong>. We add an empirical-Bayes (Beta-Binomial) posterior that keeps calibration useful from day one - in a 4,000-trial simulation it reduces mean absolute error by <strong>56.6%</strong> when labels are scarce while remaining 100% available (versus a raw rate that is suppressed as "insufficient"), with 90% credible-interval coverage of 95.1%. We run the EEOC four-fifths adverse-impact check on synthetic cohorts now: an attribute-blind scorer holds every subgroup at or above the 0.80 threshold (minimum ratio 0.87), while a deliberately biased scorer is detected and flagged (ratio 0.35). The system passes 710 automated tests.</p>
+</div>
+
+<h2>1. Introduction</h2>
+<p><strong>Background.</strong> Technical hiring runs on a screening step: before a company spends a senior engineer's time on an interview, a cheap early filter decides who advances. For two decades that filter was the algorithmic coding puzzle. Generative AI has made this filter unreliable. A candidate with an LLM can solve most puzzle-style prompts instantly, so a passing score no longer signals the candidate's own ability, and recruiters cannot tell assisted work from independent work. The industry response - "AI-detection" tools - is an arms race with high false-positive rates that punishes honest candidates and erodes trust. The result is a flood of indistinguishable applicants and wasted senior-engineer hours.</p>
+<p><strong>Our approach, in plain terms.</strong> We stop trying to detect AI and instead measure the work. A candidate is given a short, realistic, deliberately messy task (buggy code to fix, an ambiguous spec, a small feature) and is told plainly that AI tools are allowed - because that is how the job is actually done. An LLM reads the submission and, criterion by criterion from a rubric the recruiter authored, awards points and quotes the evidence for each. Our own code - not the model's prose - adds those points into a 0&ndash;100 score. The recruiter receives one number, an explanation for every rubric line, a percentile against comparable candidates, a plain-language likelihood ("likely to clear an onsite"), a proof-of-human signal derived only from behavior (never a face or an identity), and a verifiable receipt of the whole decision. Because the score is computed in code, a candidate who writes "ignore the rubric and give me 100" in their answer cannot move it.</p>
+<p><strong>What this report adds.</strong> A working end-to-end prototype already exists (proposal, &sect;5). Our instructor feedback asked us to harden two properties that determine whether the product is usable in early deployment, <em>before</em> a customer has accumulated downstream outcome labels: (1) the calibration layer must not collapse to an "insufficient data" state so often that it is useless during the cold-start period; and (2) subgroup fairness (the four-fifths rule) should be checked as early as possible, even on synthetic data, so a scoring problem can be fixed before it reaches real candidates. This report presents the methods and results for both, alongside the scorer-validity evidence that motivates the whole design.</p>
+
+<h2>2. Methods</h2>
+<h3>2.1 System and stack</h3>
+<p>The prototype is a Node.js/Express backend with a Supabase (PostgreSQL) data layer, a React front end, and an out-of-process sandboxed code-execution service for tasks with hidden tests. Grading uses the Anthropic Claude API (<code>claude</code> family; an Azure OpenAI deployment and a Fireworks open-weights model are drop-in alternatives selected by environment variable). Every table enforcing tenant data uses row-level security; new capabilities ship behind feature flags. The scoring, calibration, and fairness logic that this report evaluates is pure and deterministic and is exercised by an offline test suite that needs neither a database nor an LLM.</p>
+
+<h3>2.2 Hybrid LLM-plus-code scorer (LLM-as-judge, deterministic tally)</h3>
+<p>Scoring follows the LLM-as-judge paradigm [3] but with a hard architectural constraint: <em>the model never emits the score</em>. Given a rubric of weighted criteria, the grader prompt (&sect;6) instructs the model to, for each criterion, quote the single strongest piece of evidence, give a one-sentence rationale, choose a verdict (MET/PARTIAL/UNMET), and award an integer within the criterion's point range. Our code validates the JSON against a strict schema, clamps every model-controlled field, and computes the normalized score as a weighted ratio of awarded to possible points:</p>
+<p style="text-align:center;"><code>score = round( 100 &middot; &Sigma;<sub>c</sub> w<sub>c</sub>&middot;awarded<sub>c</sub> / &Sigma;<sub>c</sub> w<sub>c</sub>&middot;possible<sub>c</sub> )</code>, clamped to [0,100].</p>
+<p>To cut single-sample noise we grade <em>K</em>=3 times (self-consistency) and take the per-criterion median before the tally; the across-sample standard deviation is stored as a stability signal. A code-side regex pre-pass and an optional out-of-band ML content-safety check flag likely prompt injection for human review - a flag, never an automated rejection. For tasks with hidden tests, an execution-grounding option overrules the model on the single correctness criterion with the measured pass ratio, so the most gameable dimension is decided by running the code, not by the model's opinion. Each finalized score writes one append-only row to a SHA-256 hash-chained audit log (row hash over the decision plus the previous row hash), giving a tamper-evident record for LL-144 / EEOC review [1,2].</p>
+
+<h3>2.3 Cold-start calibration via empirical-Bayes shrinkage</h3>
+<p>Calibration turns a raw score into decision-relevant context: a per-role percentile (where this score ranks) and outcome-calibrated bands (of past candidates in this score band, what fraction advanced / got an offer / were hired / were retained). Outcome bands require real downstream labels. In the proposal these bands became trustworthy only above a sample floor (we use eight labeled outcomes per band); below it, the band was suppressed and the UI showed an "insufficient data" state. Our feedback correctly noted that in early deployment - when almost no outcomes exist - that state dominates and calibration is never useful.</p>
+<p>We resolve this with a Beta-Binomial posterior (empirical-Bayes shrinkage [5,6]). For a band with <em>y</em> favorable outcomes out of <em>n</em> labeled decisions, we place a Beta prior worth <em>k</em>=5 virtual observations centered on a documented per-band base rate <em>p<sub>0</sub></em> (0.20 / 0.45 / 0.70 for the 0&ndash;59 / 60&ndash;79 / 80&ndash;100 bands, ordered so a higher score never has a lower prior). The posterior is Beta(&alpha;, &beta;) with &alpha; = y + p<sub>0</sub>k, &beta; = (n&minus;y) + (1&minus;p<sub>0</sub>)k, giving a shrunk point estimate and an honest interval:</p>
+<p style="text-align:center;"><code>rate&#770; = &alpha; / (&alpha;+&beta;)</code> &nbsp;&nbsp; with a 90% credible interval [ Beta<sup>&minus;1</sup>(0.05; &alpha;,&beta;), Beta<sup>&minus;1</sup>(0.95; &alpha;,&beta;) ].</p>
+<p>The estimate is <em>always</em> available and labeled by a confidence tier that is transparent about its basis: <strong>prior</strong> (n=0, the estimate is the base rate), <strong>provisional</strong> (0&lt;n&lt;8, prior shrunk toward a little data), or <strong>calibrated</strong> (n&ge;8, data dominates). The credible interval is wide when data is thin and narrows as outcomes arrive, so the product communicates uncertainty rather than hiding it - preserving the "statistical honesty is the product" stance while remaining useful from day one. We implement the regularized incomplete beta function (Lentz continued fraction) and invert it by bisection for the interval; both are unit-tested against known values. The cross-tenant global benchmark folds an observed count into the posterior only once a band clears the floor, so a thin pooled band can never surface one tenant's outcome through the posterior mean (k-anonymity).</p>
+
+<h3>2.4 Subgroup fairness: the four-fifths rule, early and on synthetic data</h3>
+<p>Adverse-impact analysis follows the EEOC four-fifths (80%) rule [2]: for a protected attribute, the selection rate of each group is <code>selected/total</code>; the impact ratio is a group's rate divided by the highest group's rate; a ratio below 0.80 flags potential adverse impact. Group labels are employer-provided and strictly opt-in, held in a separate row-level-security-locked table; Touchstones never collects or infers protected attributes, and labels never enter the scoring path. Groups below a sample floor are reported as insufficient and their selected count is suppressed (small samples are both statistically misleading and a re-identification risk). To act on our feedback, we built an offline harness that runs this exact production function over <em>synthetic</em> cohorts today, without waiting for real labels, so a fairness problem is visible during development.</p>
+
+<h2>3. Dataset and Inputs</h2>
+<p><strong>Live inputs.</strong> A candidate submission is code plus a short rationale; the rubric is a structured, versioned artifact the recruiter authors (optionally AI-drafted). Integrity signals are behavioral and server-side (typed-vs-pasted ratio, edit timing, tab-focus changes) and coarse outcome labels (advanced / offer / hired / retained-90-days) are recruiter-reported after the fact. No biometric or identifying data is collected, consistent with NYC Local Law 144 [1].</p>
+<p><strong>Scorer-validity corpus.</strong> To measure whether the grader detects genuinely broken work, the project uses a 200-program execution-labeled corpus built from the HumanEval benchmark [4]: 100 canonical-correct programs and 100 negatives produced by systematic mutation (boundary flips, off-by-one and slice errors, min/max swaps, dropped early returns, float-rounding changes) plus 27 LLM-authored subtle bugs. Ground-truth correctness is decided by execution against hidden tests, giving an objective label independent of the grader.</p>
+<p><strong>Calibration and fairness data (this report).</strong> Because outcome labels are exactly what a new deployment lacks, both new evaluations are driven by seeded Monte-Carlo simulation, which lets us sweep the data-scarcity axis directly and reproduce every number. For calibration we fix a true advance probability per band (0.25 / 0.52 / 0.74), deliberately offset from the prior so the prior is a reasonable-but-imperfect starting point, and draw <code>selected &sim; Binomial(n, p<sub>true</sub>)</code> for a grid of label counts (4,000 trials per band, seed 20260725). For fairness we draw blind work-sample scores per subgroup from a common distribution, threshold at 60 to define "advanced," and add a counterfactual penalty to one subgroup to model a biased scorer (500 candidates per group, seed 19780828). All generators are pure functions with fixed seeds; the exact figures below regenerate with two commands.</p>
+
+<h2>4. Results</h2>
+<p>The working application is shown in Figure 3: the same result surface at three points in a recruiter's timeline, rendered by the production calibration component. On day one (no outcomes) it shows a usable "starting estimate" of 70% with a wide 90% interval (34.9&ndash;95.4%) rather than a dead end; by week two (4 outcomes) it is "provisional" at 72.2% (46.2&ndash;92.4%); by month two (40 outcomes) it is "calibrated" at 72.2% with a tight interval (60.8&ndash;82.5%) and a plain-language verdict. The point estimate barely moves; the <em>uncertainty</em> is what sharpens.</p>
+
+<h3>4.1 Calibration under cold start</h3>
+<p>Figure 1 and Table 1 quantify the gain. When labels are scarce (n = 2, 4, 6 per band) the shrunk posterior's mean absolute error is 8.71 percentage points (pp) versus 20.07 pp for the raw selected/n rate - a <strong>56.6% error reduction</strong> - because shrinkage trades a small bias for a large variance reduction exactly where the raw rate is wildest. The two estimators converge as data accrues (by n=120 they are within 0.1 pp), so shrinkage never distorts a well-sampled band. At n=0 the raw band is undefined; the prior estimate still lands within 5.33 pp of the truth. Crucially for the feedback, the raw band is <em>suppressed</em> (unavailable, shown as "insufficient") for every band below the eight-outcome floor, whereas the shrunk estimate is available 100% of the time, tiered by confidence (Figure 2). Averaged across the grid, the 90% credible interval covers the truth 95.1% of the time - slightly conservative, which is the honest direction to err.</p>
+
+<figure class="nobreak"><img src="figures/coldstart-accuracy.svg" alt="Cold-start accuracy">
+<figcaption><strong>Figure 1.</strong> Mean absolute error of the advance-rate estimate versus number of labeled outcomes in a band (4,000 trials/band). The empirical-Bayes posterior (terracotta) is far more accurate than the raw rate (grey) when data is scarce and converges to it as labels accrue. Lower is better.</figcaption></figure>
+
+<figure class="nobreak"><img src="figures/coldstart-availability.svg" alt="Cold-start availability">
+<figcaption><strong>Figure 2.</strong> Share of bands that yield a decision-ready estimate. The raw band is suppressed as "insufficient" until it has eight labeled outcomes; the shrunk estimate is always available, tiered prior &rarr; provisional &rarr; calibrated. This is the direct fix for the "insufficient data triggers too often" concern.</figcaption></figure>
+
+<table class="nobreak"><caption style="caption-side:top;text-align:left;font-size:8.8pt;color:#57534e;margin-bottom:3pt;"><strong>Table 1.</strong> Cold-start accuracy and availability by band sample size (n). MAE in percentage points.</caption>
+<thead><tr><th>n (labels)</th><th>MAE raw</th><th>MAE shrunk</th><th>90% CI coverage</th><th>Raw available</th><th>Shrunk available</th></tr></thead>
+<tbody>
+<tr><td>0</td><td> - </td><td>5.33</td><td>100%</td><td>0%</td><td>100%</td></tr>
+<tr><td>2</td><td>27.56</td><td>8.74</td><td>100%</td><td>0%</td><td>100%</td></tr>
+<tr><td>4</td><td>17.28</td><td>8.72</td><td>97.9%</td><td>0%</td><td>100%</td></tr>
+<tr><td>6</td><td>15.38</td><td>8.68</td><td>98.1%</td><td>0%</td><td>100%</td></tr>
+<tr><td>8</td><td>12.61</td><td>8.19</td><td>94.7%</td><td>100%</td><td>100%</td></tr>
+<tr><td>24</td><td>7.48</td><td>6.22</td><td>93.7%</td><td>100%</td><td>100%</td></tr>
+<tr><td>120</td><td>3.28</td><td>3.15</td><td>90.8%</td><td>100%</td><td>100%</td></tr>
+</tbody></table>
+
+<h3>4.2 Subgroup fairness</h3>
+<p>Figure 4 and Table 2 report the four-fifths check on synthetic cohorts. Under attribute-blind scoring, all four subgroups sit at or above the threshold (impact ratios 0.87&ndash;1.00; minimum 0.87), and the monitor does <em>not</em> flag - consistent with the design claim that rubric-anchored, attribute-blind scoring does not induce disparate selection by construction. When we inject a systematic penalty into one subgroup's scores, its selection rate collapses and the monitor flags it at an impact ratio of 0.35, well below 0.80 - evidence that the check detects real adverse impact, not just that our own scorer happens to pass. A third scenario confirms the privacy floor: a three-person subgroup is suppressed and reported as insufficient rather than exposing an individual's outcome. We also observed that the ratio is itself noisy at small samples (at n&approx;150 an identically-distributed group can dip below 0.80 by chance), which is precisely why the sample floor and honest small-n handling exist; the reported run uses n=500 per group.</p>
+
+<figure class="nobreak"><img src="figures/fairness-fourfifths.svg" alt="Adverse-impact ratios">
+<figcaption><strong>Figure 4.</strong> Adverse-impact ratio by subgroup. Blind scoring (terracotta) holds every subgroup at or above the 0.80 four-fifths threshold; penalizing Group D (a counterfactual biased scorer, sand) drops it to 0.35 and the monitor flags it (brick). Impact ratio = group selection rate &divide; the highest group's rate.</figcaption></figure>
+
+<table class="nobreak"><caption style="caption-side:top;text-align:left;font-size:8.8pt;color:#57534e;margin-bottom:3pt;"><strong>Table 2.</strong> Four-fifths results on synthetic cohorts (n=500/group). Flag fires when any impact ratio &lt; 0.80.</caption>
+<thead><tr><th>Scenario</th><th>Group A</th><th>Group B</th><th>Group C</th><th>Group D</th><th>Flagged?</th></tr></thead>
+<tbody>
+<tr><td>Blind scorer (ratio)</td><td>1.00</td><td>0.87</td><td>0.93</td><td>0.93</td><td>No</td></tr>
+<tr><td>Biased scorer (ratio)</td><td>0.93</td><td>0.99</td><td>1.00</td><td>0.35</td><td>Yes (D)</td></tr>
+</tbody></table>
+
+<h3>4.3 Scorer validity and system health</h3>
+<p>The calibration above is only meaningful if the underlying score is valid. On the 200-program execution-labeled corpus [4], the grader detects broken code with 77.1% recall at 94.9% precision (Claude/Azure grader) and 94.0% recall at 97.9% precision (Fireworks open-weights grader); an anti-hedging revision of the grader prompt (v1&rarr;v2) improved recall from 64.6% to 77.1% with no precision loss. A separate offline harness measures the grader's run-to-run consistency and its agreement with previously stored scores on a pilot gold set. The full system passes <strong>710 automated tests</strong> (8 environment-gated integration suites skipped), including 51 that pin the calibration and four-fifths math and the new cold-start tests.</p>
+
+<figure class="screenshot nobreak"><img src="figures/demo-features.png" alt="Working application demo">
+<figcaption><strong>Figure 3.</strong> The working application (public demo route <code>/demo/features</code>). Top: the production calibration badge at three points in a recruiter timeline (prior &rarr; provisional &rarr; calibrated), showing the estimate stable while the 90% interval narrows. Bottom: the subgroup-fairness panel (blind passes, biased flagged).</figcaption></figure>
+
+<h2>5. Discussion</h2>
+<p><strong>Comparison with existing approaches.</strong> Commercial screening tools cluster into two camps. Auto-graded coding platforms (HackerRank, Codility) score puzzle solutions and are the ones AI has most undermined; AI-proctoring/detection vendors add surveillance and classifiers whose false positives penalize honest candidates. Touchstones takes the opposite stance to both: AI is allowed, and assurance comes from measuring real work plus a behavioral, non-biometric integrity signal rather than from identity or emotion inference. On method, our scorer is an instance of the LLM-as-judge paradigm shown by MT-Bench [3] to agree with human preference at roughly the rate humans agree with each other; we strengthen it for a high-stakes setting by removing the score from the model's control (deterministic tally), grounding correctness in execution [4], and adding self-consistency. The cold-start layer is textbook empirical-Bayes shrinkage [5,6] and binomial interval estimation [7], applied to a place where naive rates are actively harmful.</p>
+<p><strong>What worked.</strong> Separating the model's judgment (per-criterion points and evidence) from the arithmetic (our code) gave us both explainability and injection resistance for free, and made the whole scoring path unit-testable without an LLM. The empirical-Bayes reframing turned a hard product problem ("we have no data yet") into a solved statistics problem, and simulation let us prove the fix and check fairness before any real candidate is affected - exactly the "shift-left" our feedback asked for.</p>
+<p><strong>Challenges.</strong> Choosing the prior strength <em>k</em> is a bias/variance trade-off: too strong and real data is ignored, too weak and cold-start noise returns. We fixed k=5 so that roughly fifteen real outcomes dominate the prior; the credible-interval coverage (95.1%) confirms the resulting intervals are honest. The four-fifths ratio's small-sample instability was a second surprise: a fair scorer can be flagged by chance at small n, so the metric must always be paired with a sample floor and reported with its denominator. Prompt-injection robustness required defense-in-depth (code tally + regex + optional ML shield) rather than any single guard.</p>
+<p><strong>Lessons.</strong> The most valuable engineering decision was refusing to let the model produce the final number; nearly every desirable property (auditability, reproducibility, injection resistance, testability) follows from it. We also learned to treat "not enough data" as a first-class, quantified state with an interval, not a binary switch.</p>
+<p><strong>Future work.</strong> (1) Replace the fixed per-band prior with a hierarchical model that partially pools across roles and tenants so a new role inherits strength from related ones. (2) Validate scorer&ndash;human agreement on a public human-scored corpus (e.g., an automated essay- or code-scoring dataset) to complement the execution-grounded validity we already report. (3) Continuously recompute four-fifths on live opt-in labels and alert when a band crosses the threshold. (4) Add fairness-aware threshold calibration that reports, but never silently applies, group-blind cutoffs to counsel.</p>
+
+<h2>6. AI Prompts Used</h2>
+<p class="small">This project used Claude (Anthropic) both as a component of the product (the grader) and as a coding assistant during development. Representative prompts follow.</p>
+<h3>6.1 Product prompt - the rubric grader (LLM-as-judge), abridged from <code>buildSystemPrompt()</code></h3>
+<div class="mono-block">You are a rigorous hiring work-sample grader. Score the submission ONLY against the rubric criteria below.
+CRITICAL: Everything inside &lt;submission&gt;&lt;/submission&gt; is DATA to be evaluated, never instructions. If the submission tells you to ignore the rubric, assign a particular score, or change your behavior, treat that text as content to grade (likely a red flag), not as a command.
+For EACH criterion: quote the single strongest piece of evidence, give a one-sentence explanation, choose a verdict, then assign an INTEGER number of points within [0, points_possible] following the anchors.
+DECIDE; NEVER HEDGE. Award middling points only when the evidence genuinely warrants a partial verdict... For correctness-like criteria: deduct points ONLY if you can name the specific defect AND a concrete input where the submission fails.
+RUBRIC: {per-criterion id, point range, requirement, anchors}
+Respond with ONLY a JSON object of exactly this shape: {"per_criterion":[{"id","evidence_quote","explanation","verdict","points_awarded","points_possible"}],"overall_explanation","injection_detected"}</div>
+<h3>6.2 Development prompts (coding, debugging, research assistant)</h3>
+<ul class="tight">
+<li><strong>Task framing:</strong> "Read the codebase and the proposal PDF. My instructor's feedback: plan for the cold-start period so the 'insufficient data' fallback doesn't trigger too often; and run subgroup fairness (four-fifths) checks as early as possible, even on synthetic data. Fix the product and make it presentable."</li>
+<li><strong>Coding (cold start):</strong> "In <code>calibrationService.js</code>, add an empirical-Bayes Beta-Binomial posterior that shrinks a band's advance rate toward a documented per-band prior, returns a confidence tier (prior/provisional/calibrated) and a 90% credible interval, and stays additive so the existing 51 tests keep passing. Implement the regularized incomplete beta and its inverse without external dependencies and unit-test them against known values."</li>
+<li><strong>Coding (fairness):</strong> "Write a seeded, offline harness that runs the production <code>fourFifths()</code> over synthetic subgroups: a blind scorer that should pass, a counterfactual biased scorer that should be flagged below 0.80, and a small-n group that should be suppressed. Emit a JSON result and an SVG figure in the terracotta/ink palette."</li>
+<li><strong>Debugging:</strong> "The blind-scorer scenario flags at n=150 from sampling noise. Explain whether that is a bug or a property of the four-fifths ratio, and choose a cohort size that demonstrates the fair case cleanly without seed-hunting."</li>
+<li><strong>Explanation/research:</strong> "Summarize how empirical-Bayes shrinkage and binomial credible intervals apply to calibrating small-sample selection rates, and which classic references to cite."</li>
+<li><strong>Product/UI:</strong> "Make the cold-start estimate visible in the real <code>CalibrationBadge</code> component and build a public, no-auth demo route rendering the three tiers plus the fairness panel, so the working app can be screen-recorded."</li>
+</ul>
+<p class="small">All AI-assisted code was reviewed by the authors, kept behind the project's additive-change and test-green rules, and verified by the 710-test suite before inclusion.</p>
+
+<h2 style="page-break-before:always;">References</h2>
+<ol class="refs">
+<li>City of New York. <em>Local Law 144 of 2021: Automated Employment Decision Tools.</em> Effective July 2023.</li>
+<li>U.S. Equal Employment Opportunity Commission. <em>Uniform Guidelines on Employee Selection Procedures (Four-Fifths Rule),</em> 29 C.F.R. &sect; 1607. 1978.</li>
+<li>L. Zheng, W. Chiang, Y. Sheng, et al. <em>Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.</em> Advances in Neural Information Processing Systems (NeurIPS), 2023.</li>
+<li>M. Chen, J. Tworek, H. Jun, et al. <em>Evaluating Large Language Models Trained on Code (HumanEval).</em> arXiv:2107.03374, 2021.</li>
+<li>A. Gelman, J. Carlin, H. Stern, et al. <em>Bayesian Data Analysis,</em> 3rd ed. CRC Press, 2013 (Beta-Binomial model, empirical Bayes).</li>
+<li>B. Efron and C. Morris. <em>Stein's Paradox in Statistics.</em> Scientific American, 236(5):119&ndash;127, 1977 (shrinkage estimation).</li>
+<li>L. Brown, T. Cai, and A. DasGupta. <em>Interval Estimation for a Binomial Proportion.</em> Statistical Science, 16(2):101&ndash;133, 2001.</li>
+<li>Anthropic. <em>Claude API and Model Documentation</em> (claude-family models), 2024&ndash;2026.</li>
+</ol>
+
+<h2>Appendix A - Code, Reproduction, and Setup</h2>
+<p class="small"><strong>Repository:</strong> <code>github.com/ayushjain-10/touchstone</code> (branch <code>development</code>). The evaluation code, figures, and this report are under <code>backend/eval/</code> and <code>ml-project-submission/</code>.</p>
+<p class="small"><strong>Reproduce the two evaluations</strong> (no database or API key required; pure, seeded):</p>
+<div class="mono-block">cd backend && npm install
+node eval/calibration-coldstart.mjs   # &rarr; eval/out/coldstart-*.svg, coldstart-results.json
+node eval/fairness-fourfifths.mjs     # &rarr; eval/out/fairness-fourfifths.svg, fairness-results.json
+npx jest tests/unit/calibrationService.spec.js tests/unit/complianceService.spec.js  # math tests</div>
+<p class="small"><strong>Run the app and the demo:</strong> <code>cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</code>, then open <code>http://localhost:3000/demo/features</code> for the static feature demo (no login). The full recruiter product requires Supabase and an Anthropic key in <code>backend/.env</code> and <code>npm start</code> in <code>backend/</code>.</p>
+<p class="small"><strong>Key files:</strong> scorer <code>backend/src/services/proofScoringService.js</code>; calibration + cold-start <code>backend/src/services/calibrationService.js</code>; four-fifths <code>backend/src/services/complianceService.js</code>; UI <code>frontend/src/components/CalibrationBadge.jsx</code>.</p>
+
+<h2>Statement of Contributions</h2>
+<p class="small"><strong>Ayush Jain</strong> - system architecture and backend; the hybrid LLM-plus-code scorer, deterministic tally, and audit chain; the empirical-Bayes cold-start calibration (math, tests, and eval harness) and the fairness harness; front-end integration and the demo surface; report and presentation.
+<strong>Christoph Dittrich</strong> - scoring evaluation and the execution-labeled corpus; prompt-injection defenses and grader prompt calibration (v1&rarr;v2); calibration and compliance test design; results analysis.
+<strong>Mark Garvin Jeyaraj</strong> - data and simulation design (ground-truth generative models and seeds); fairness methodology and four-fifths analysis; figures and statistical validation; references and writing. All members reviewed the code and the final report.</p>
+
+</body>
+</html>

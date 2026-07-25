@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-feature-settings: 'cv05', 'ss01';
+  }
+
+  /* Editorial serif headings, optical sizing on for Fraunces */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif text-ink;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: #e2e6ff;
+    color: #1c2664;
+  }
+
+  /* Honor reduced-motion everywhere */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* The single primary action uses the ultramarine provenance color. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper;
+  }
+  .btn-primary {
+    @apply btn bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-card hover:-translate-y-0.5 hover:shadow-glow active:translate-y-px;
+  }
+  .btn-ghost {
+    @apply btn border border-stone-300 bg-transparent text-ink hover:border-stone-400 hover:bg-stone-100/60;
+  }
+  .btn-quiet {
+    @apply btn px-3 text-stone-600 hover:text-ink;
+  }
+
+  /* Section kicker uses the same provenance color as evidence links. Sentence-case
+     italic serif (not all-caps tracked sans) — reads as an editorial eyebrow
+     rather than the generic AI-generated dashboard-label treatment. */
+  .kicker {
+    @apply inline-flex items-center gap-2 font-serif text-[0.95rem] italic text-brand-600;
+  }
+
+  .card {
+    @apply rounded-xl border border-stone-200 bg-white shadow-card;
+  }
+
+  /* Interactive card — compose with .card for a quiet warm lift on hover/focus. */
+  .card-lift {
+    @apply transform-gpu transition duration-200 ease-out hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift;
+  }
+
+  .hairline {
+    @apply border-stone-200;
+  }
+
+  /* Reveal content is visible by default. Reveal.jsx adds motion through the
+     Web Animations API only when the browser supports it. */
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer utilities {
+  /* Faint warm paper grain for the "rustic" texture — very subtle */
+  .bg-grain {
+    background-image: radial-gradient(rgba(34, 30, 24, 0.025) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+  /* Light grain for use on the saturated terracotta CTA panel (white specks). */
+  .bg-grain-light {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 5px 5px;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .bg-evidence-light {
+    background-image:
+      radial-gradient(circle at 82% 12%, rgba(83, 102, 216, 0.18), transparent 32%),
+      radial-gradient(circle at 14% 74%, rgba(200, 206, 250, 0.42), transparent 36%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.34), rgba(238, 240, 255, 0.18));
+  }
+  .bg-evidence-dark {
+    background-image:
+      radial-gradient(circle at 78% 18%, rgba(67, 88, 208, 0.3), transparent 30%),
+      radial-gradient(circle at 20% 78%, rgba(39, 56, 158, 0.24), transparent 34%),
+      linear-gradient(145deg, #111522, #0b0f1c 68%, #111744);
+  }
+  .bg-evidence-grid {
+    background-image:
+      linear-gradient(rgba(116, 132, 227, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(116, 132, 227, 0.08) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .perspective-stage {
+    perspective: 1400px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+}

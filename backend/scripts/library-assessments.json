@@ -1,0 +1,2720 @@
+[
+  {
+    "title": "Fix the token-bucket rate limiter that leaks bursts",
+    "role_family": "backend",
+    "difficulty": "mid",
+    "response_type": "code",
+    "languages": [
+      "javascript"
+    ],
+    "duration_minutes": 30,
+    "prompt_md": "## Rate limiter is leaking bursts\n\nYou are on call for the API gateway team. Your service protects an upstream with a per-client **token-bucket** rate limiter, but customers are getting through in large bursts right after a quiet period and overwhelming the upstream. The on-call trace points at the token accounting in `rateLimit`, in `solution.js`. Find the defect and make the accounting match the spec below.\n\n### Token-bucket spec\n\n- Each client has a bucket that starts **full** with `capacity` tokens before the first request.\n- `timestamps` are request-arrival times in **milliseconds**, sorted non-decreasing. `refillRate` is tokens added per **second**.\n- Before deciding request `i`, refill the bucket by the time elapsed since the previous request: add `((t_i - t_prev) / 1000) * refillRate` tokens, then clamp the total so it never exceeds `capacity`. For the first request the elapsed time is `0`.\n- If the bucket holds **at least 1 token**, allow the request and remove exactly 1 token. Otherwise deny it and remove nothing.\n- Return one boolean per request, in order: `true` = allowed, `false` = denied.\n\nThe bug to hunt: after a long idle gap the bucket should refill to **at most** `capacity`, so a following burst can never exceed `capacity` back-to-back allows. The shipped code lets idle time bank unbounded tokens, so the next burst all passes.\n\n### Contract\n\n```\nrateLimit(timestamps: number[], capacity: number, refillRate: number) -> boolean[]\n```\n\n`timestamps` may be empty (return `[]`). `refillRate` may be `0`. Timestamps may repeat (simultaneous requests refill nothing between them).\n\n### Examples\n\n```js\n// Steady 1 req/sec with refillRate 1/sec never drains the bucket.\nrateLimit([0, 1000, 2000, 3000], 3, 1)\n// -> [true, true, true, true]\n\n// Two quick requests drain a capacity-2 bucket; the 3rd is denied,\n// then after ~1.6s one token has refilled and the 4th is allowed.\nrateLimit([0, 100, 200, 1800], 2, 1)\n// -> [true, true, false, true]\n\n// After a 10s idle the bucket refills only up to capacity (2),\n// so a burst of 3 gets exactly 2 through, not more.\nrateLimit([0, 10000, 10100, 10200], 2, 1)\n// -> [true, true, true, false]\n```\n\nEdit `rateLimit` in `solution.js`. AI assistance is allowed; you own the correctness.",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "rateLimit implements token-bucket accounting per the spec: bucket starts full, refill = elapsedSeconds * refillRate clamped to capacity, allow when tokens >= 1 and decrement by 1, else deny. Steady-rate and burst inputs return the correct per-request allow/deny sequence.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles the tricky inputs: empty timestamps -> [], refillRate 0 (no refill ever), repeated/simultaneous timestamps (zero elapsed), a long idle gap that must clamp back to capacity (the core bug), and capacity of 1.",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Single clear pass over the requests with descriptive names; the clamp-then-decrement logic is easy to follow and there is no dead or duplicated code.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.js",
+        "content": "// Fix the token-bucket accounting so bursts can't slip through after a quiet period.\n// Contract: rateLimit(timestamps, capacity, refillRate) -> boolean[]  (one decision per request)\nfunction rateLimit(timestamps, capacity, refillRate) {\n  if (!timestamps.length) return [];\n  let tokens = capacity;\n  let last = timestamps[0];\n  const decisions = [];\n  for (const t of timestamps) {\n    const elapsedSeconds = (t - last) / 1000;\n    // Current prod behavior: refill by elapsed time, then check the bucket.\n    tokens = tokens + elapsedSeconds * refillRate;\n    last = t;\n    if (tokens >= 1) {\n      tokens -= 1;\n      decisions.push(true);\n    } else {\n      decisions.push(false);\n    }\n  }\n  return decisions;\n}\n\nmodule.exports = { rateLimit };\n",
+        "language": "javascript"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "rateLimit",
+      "entry_file": "solution.js",
+      "language": "node",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "burst_then_wait",
+          "input": [
+            [
+              0,
+              100,
+              200,
+              1800
+            ],
+            2,
+            1
+          ],
+          "expected": [
+            true,
+            true,
+            false,
+            true
+          ],
+          "visible": true
+        },
+        {
+          "name": "steady_at_rate",
+          "input": [
+            [
+              0,
+              1000,
+              2000,
+              3000
+            ],
+            3,
+            1
+          ],
+          "expected": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "visible": true
+        },
+        {
+          "name": "idle_then_burst_capped",
+          "input": [
+            [
+              0,
+              10000,
+              10100,
+              10200
+            ],
+            2,
+            1
+          ],
+          "expected": [
+            true,
+            true,
+            true,
+            false
+          ],
+          "visible": true
+        },
+        {
+          "name": "empty_input",
+          "input": [
+            [],
+            5,
+            1
+          ],
+          "expected": [],
+          "visible": false
+        },
+        {
+          "name": "big_burst_capped",
+          "input": [
+            [
+              0,
+              5000,
+              5100,
+              5200,
+              5300,
+              5400
+            ],
+            3,
+            1
+          ],
+          "expected": [
+            true,
+            true,
+            true,
+            true,
+            false,
+            false
+          ],
+          "visible": false
+        },
+        {
+          "name": "capacity_one_strict",
+          "input": [
+            [
+              0,
+              100,
+              200,
+              300
+            ],
+            1,
+            1
+          ],
+          "expected": [
+            true,
+            false,
+            false,
+            false
+          ],
+          "visible": false
+        },
+        {
+          "name": "high_refill_rate",
+          "input": [
+            [
+              0,
+              40,
+              80,
+              300
+            ],
+            2,
+            10
+          ],
+          "expected": [
+            true,
+            true,
+            false,
+            true
+          ],
+          "visible": false
+        },
+        {
+          "name": "zero_refill",
+          "input": [
+            [
+              0,
+              100,
+              200,
+              300,
+              400
+            ],
+            3,
+            0
+          ],
+          "expected": [
+            true,
+            true,
+            true,
+            false,
+            false
+          ],
+          "visible": false
+        },
+        {
+          "name": "simultaneous_timestamps",
+          "input": [
+            [
+              1000,
+              1000,
+              1000,
+              1000
+            ],
+            2,
+            1
+          ],
+          "expected": [
+            true,
+            true,
+            false,
+            false
+          ],
+          "visible": false
+        },
+        {
+          "name": "large_capacity_all_pass",
+          "input": [
+            [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            100,
+            1
+          ],
+          "expected": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "visible": false
+        },
+        {
+          "name": "long_idle_restores_to_capacity",
+          "input": [
+            [
+              0,
+              0,
+              0,
+              5000
+            ],
+            2,
+            1
+          ],
+          "expected": [
+            true,
+            true,
+            false,
+            true
+          ],
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Idempotent Charge Handler",
+    "role_family": "backend",
+    "difficulty": "senior",
+    "response_type": "code",
+    "languages": [
+      "python"
+    ],
+    "duration_minutes": 35,
+    "prompt_md": "## Context\n\nYou own the charge pipeline at a payments company. Clients call your `/charge` endpoint with an `idempotency_key` so that network retries, duplicate webhook deliveries, and double-clicks don't charge a customer twice. Your job downstream is the safety net: given the raw stream of charge events that hit the service (retries and all), figure out **which charges actually go to the card network**.\n\nThe rule that matters: the **first** event for a given `idempotency_key` wins. Every later event carrying a key you've already seen is a retry and must be dropped — even if it carries a *different* `amount` (a buggy client that reuses a key with a new amount must NOT produce a second charge; the original amount stands). Dedupe is strictly by `idempotency_key`, never by amount — two genuinely different charges can have the same amount.\n\n## Task\n\nImplement:\n\n```python\ndef process_charges(events):\n    ...\n```\n\n- **Argument** `events`: a `list` of dicts, each shaped `{\"idempotency_key\": str, \"amount\": int}` (`amount` is in integer cents, `>= 0`). The list is already in arrival order.\n- **Return**: a `list[int]` of the amounts that are actually charged — one entry per *first* occurrence of each key, in the order those keys first appeared.\n\n## Examples\n\n```python\n# 1) two distinct keys -> both charged\nprocess_charges([\n    {\"idempotency_key\": \"a\", \"amount\": 500},\n    {\"idempotency_key\": \"b\", \"amount\": 1200},\n])  # -> [500, 1200]\n\n# 2) a retry of the same key is dropped\nprocess_charges([\n    {\"idempotency_key\": \"a\", \"amount\": 500},\n    {\"idempotency_key\": \"a\", \"amount\": 500},\n    {\"idempotency_key\": \"b\", \"amount\": 1200},\n])  # -> [500, 1200]\n\n# 3) same key, DIFFERENT amount later -> first amount wins, retry dropped\nprocess_charges([\n    {\"idempotency_key\": \"a\", \"amount\": 500},\n    {\"idempotency_key\": \"a\", \"amount\": 9999},\n    {\"idempotency_key\": \"c\", \"amount\": 100},\n])  # -> [500, 100]\n```",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "Dedupes strictly by idempotency_key with first-occurrence winning, preserves the order in which keys first appear, and returns the correct list of charged amounts for all straightforward inputs.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles the tricky cases: empty input returns []; a repeated key with a conflicting later amount keeps the FIRST amount; identical amounts under different keys are all kept (no dedupe-by-amount); zero-amount charges are preserved; keys are treated case-sensitively.",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Single clear pass over the events using an appropriate seen-set (or equivalent), no needless O(n^2) scans or mutation of the input, with self-explanatory naming.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.py",
+        "content": "def process_charges(events):\n    # events: list of {\"idempotency_key\": str, \"amount\": int}. Return the amounts actually\n    # charged: dedupe by idempotency_key (first occurrence wins), preserving first-seen order.\n    pass\n",
+        "language": "python"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "process_charges",
+      "entry_file": "solution.py",
+      "language": "python",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "two unique charges",
+          "input": [
+            [
+              {
+                "idempotency_key": "a",
+                "amount": 500
+              },
+              {
+                "idempotency_key": "b",
+                "amount": 1200
+              }
+            ]
+          ],
+          "expected": [
+            500,
+            1200
+          ],
+          "visible": true
+        },
+        {
+          "name": "retry of same key is deduped",
+          "input": [
+            [
+              {
+                "idempotency_key": "a",
+                "amount": 500
+              },
+              {
+                "idempotency_key": "a",
+                "amount": 500
+              },
+              {
+                "idempotency_key": "b",
+                "amount": 1200
+              }
+            ]
+          ],
+          "expected": [
+            500,
+            1200
+          ],
+          "visible": true
+        },
+        {
+          "name": "first-wins on conflicting amount for same key",
+          "input": [
+            [
+              {
+                "idempotency_key": "a",
+                "amount": 500
+              },
+              {
+                "idempotency_key": "a",
+                "amount": 9999
+              },
+              {
+                "idempotency_key": "c",
+                "amount": 100
+              }
+            ]
+          ],
+          "expected": [
+            500,
+            100
+          ],
+          "visible": true
+        },
+        {
+          "name": "empty event list",
+          "input": [
+            []
+          ],
+          "expected": [],
+          "visible": false
+        },
+        {
+          "name": "single event",
+          "input": [
+            [
+              {
+                "idempotency_key": "x",
+                "amount": 2500
+              }
+            ]
+          ],
+          "expected": [
+            2500
+          ],
+          "visible": false
+        },
+        {
+          "name": "all duplicates of one key",
+          "input": [
+            [
+              {
+                "idempotency_key": "k",
+                "amount": 1000
+              },
+              {
+                "idempotency_key": "k",
+                "amount": 1000
+              },
+              {
+                "idempotency_key": "k",
+                "amount": 1000
+              }
+            ]
+          ],
+          "expected": [
+            1000
+          ],
+          "visible": false
+        },
+        {
+          "name": "interleaved duplicates preserve first-occurrence order",
+          "input": [
+            [
+              {
+                "idempotency_key": "a",
+                "amount": 100
+              },
+              {
+                "idempotency_key": "b",
+                "amount": 200
+              },
+              {
+                "idempotency_key": "a",
+                "amount": 100
+              },
+              {
+                "idempotency_key": "c",
+                "amount": 300
+              },
+              {
+                "idempotency_key": "b",
+                "amount": 200
+              }
+            ]
+          ],
+          "expected": [
+            100,
+            200,
+            300
+          ],
+          "visible": false
+        },
+        {
+          "name": "zero-amount charge is still a charge",
+          "input": [
+            [
+              {
+                "idempotency_key": "a",
+                "amount": 0
+              },
+              {
+                "idempotency_key": "a",
+                "amount": 0
+              },
+              {
+                "idempotency_key": "b",
+                "amount": 50
+              }
+            ]
+          ],
+          "expected": [
+            0,
+            50
+          ],
+          "visible": false
+        },
+        {
+          "name": "duplicate key at the very end",
+          "input": [
+            [
+              {
+                "idempotency_key": "p",
+                "amount": 700
+              },
+              {
+                "idempotency_key": "q",
+                "amount": 800
+              },
+              {
+                "idempotency_key": "r",
+                "amount": 900
+              },
+              {
+                "idempotency_key": "p",
+                "amount": 700
+              }
+            ]
+          ],
+          "expected": [
+            700,
+            800,
+            900
+          ],
+          "visible": false
+        },
+        {
+          "name": "keys are case-sensitive",
+          "input": [
+            [
+              {
+                "idempotency_key": "A",
+                "amount": 10
+              },
+              {
+                "idempotency_key": "a",
+                "amount": 20
+              }
+            ]
+          ],
+          "expected": [
+            10,
+            20
+          ],
+          "visible": false
+        },
+        {
+          "name": "same amount under different keys is not deduped",
+          "input": [
+            [
+              {
+                "idempotency_key": "a",
+                "amount": 500
+              },
+              {
+                "idempotency_key": "b",
+                "amount": 500
+              },
+              {
+                "idempotency_key": "c",
+                "amount": 500
+              }
+            ]
+          ],
+          "expected": [
+            500,
+            500,
+            500
+          ],
+          "visible": false
+        },
+        {
+          "name": "realistic mixed retries",
+          "input": [
+            [
+              {
+                "idempotency_key": "txn_1",
+                "amount": 1999
+              },
+              {
+                "idempotency_key": "txn_2",
+                "amount": 499
+              },
+              {
+                "idempotency_key": "txn_1",
+                "amount": 1999
+              },
+              {
+                "idempotency_key": "txn_3",
+                "amount": 10000
+              },
+              {
+                "idempotency_key": "txn_2",
+                "amount": 499
+              },
+              {
+                "idempotency_key": "txn_4",
+                "amount": 250
+              }
+            ]
+          ],
+          "expected": [
+            1999,
+            499,
+            10000,
+            250
+          ],
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Dedupe Messy Contact Records",
+    "role_family": "data",
+    "difficulty": "mid",
+    "response_type": "code",
+    "languages": [
+      "python"
+    ],
+    "duration_minutes": 35,
+    "prompt_md": "## Context\n\nYou are on the data team at a B2B company. Sales just handed you an exported list of contacts scraped from three different tools, and it is a mess: the same person shows up several times with the email in different casing, phone numbers formatted every possible way, and some rows missing a name or a phone. Before this feeds the CRM, you need to collapse each real person into a single clean record.\n\n## Task\n\nImplement `dedupe_contacts(records)`.\n\n- `records` is a list of dicts, each shaped `{\"name\": str, \"email\": str, \"phone\": str}`. Any field may be an empty string `\"\"`.\n- **Normalize** each record: the email is lowercased and surrounding whitespace stripped; the phone keeps **only its digit characters** (drop spaces, `+`, `(`, `)`, `-`, `.`, letters, everything non-digit).\n- **Dedupe** on the **normalized email** (that is the identity key).\n- **Merge** duplicates field by field: for `name` and `phone`, keep the **first non-empty** value seen across all rows sharing that email (once a field is filled, later rows do not overwrite it). A phone that normalizes to `\"\"` (e.g. `\"N/A\"`) counts as empty.\n- **Preserve first-seen order**: a contact appears in the output at the position where its email first appeared in the input.\n\n## Contract\n\n- **Function:** `dedupe_contacts(records)`\n- **Argument:** `records` — `list[dict]` with keys `name`, `email`, `phone`\n- **Returns:** `list[dict]`, one dict per unique normalized email, each shaped `{\"name\": str, \"email\": str, \"phone\": str}` where `email` is the normalized email and `phone` is digits-only. Dict key order does not matter.\n\n## Examples\n\nSame person, email casing differs, phone reformatted:\n\n```python\ndedupe_contacts([\n    {\"name\": \"Alice\", \"email\": \"alice@corp.com\", \"phone\": \"555-0100\"},\n    {\"name\": \"Alice\", \"email\": \"ALICE@corp.com\", \"phone\": \"5550100\"},\n])\n# -> [{\"name\": \"Alice\", \"email\": \"alice@corp.com\", \"phone\": \"5550100\"}]\n```\n\nMissing name in the first row gets filled from the second:\n\n```python\ndedupe_contacts([\n    {\"name\": \"\",    \"email\": \"bob@corp.com\", \"phone\": \"(555) 010-1234\"},\n    {\"name\": \"Bob\", \"email\": \"bob@corp.com\", \"phone\": \"\"},\n])\n# -> [{\"name\": \"Bob\", \"email\": \"bob@corp.com\", \"phone\": \"5550101234\"}]\n```\n\nTwo distinct people, original order preserved:\n\n```python\ndedupe_contacts([\n    {\"name\": \"Carol\", \"email\": \"carol@x.io\", \"phone\": \"111\"},\n    {\"name\": \"Dave\",  \"email\": \"dave@x.io\",  \"phone\": \"222\"},\n])\n# -> [{\"name\": \"Carol\", \"email\": \"carol@x.io\", \"phone\": \"111\"},\n#     {\"name\": \"Dave\",  \"email\": \"dave@x.io\",  \"phone\": \"222\"}]\n```\n\nAI tools are allowed. What we care about is a correct, readable solution that handles the messy edges. Your work is scored in code from the rubric below, with reasoning and evidence attached.",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "Correctly normalizes email (lowercase + strip) and phone (digits only), dedupes on the normalized email, and preserves first-seen order for both the output list and which row wins ties. Passes the core visible/hidden cases.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles empty input, empty-string fields, a phone that normalizes to empty (e.g. 'N/A'), first-non-empty merging across 3+ duplicates, and interleaved emails without reordering.",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Clear single-pass structure, sensible names, no dead code or needless complexity; merge logic is easy to follow.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.py",
+        "content": "def dedupe_contacts(records):\n    # records: list of {\"name\": str, \"email\": str, \"phone\": str}\n    # Return a deduped list keyed by normalized (lowercased, stripped) email,\n    # phones reduced to digits only, merging first non-empty fields, first-seen order.\n    pass\n",
+        "language": "python"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "dedupe_contacts",
+      "entry_file": "solution.py",
+      "language": "python",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "same email, different casing, reformatted phone",
+          "input": [
+            [
+              {
+                "name": "Alice",
+                "email": "alice@corp.com",
+                "phone": "555-0100"
+              },
+              {
+                "name": "Alice",
+                "email": "ALICE@corp.com",
+                "phone": "5550100"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Alice",
+              "email": "alice@corp.com",
+              "phone": "5550100"
+            }
+          ],
+          "visible": true
+        },
+        {
+          "name": "missing name filled from later duplicate",
+          "input": [
+            [
+              {
+                "name": "",
+                "email": "bob@corp.com",
+                "phone": "(555) 010-1234"
+              },
+              {
+                "name": "Bob",
+                "email": "bob@corp.com",
+                "phone": ""
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Bob",
+              "email": "bob@corp.com",
+              "phone": "5550101234"
+            }
+          ],
+          "visible": true
+        },
+        {
+          "name": "two distinct people preserve order",
+          "input": [
+            [
+              {
+                "name": "Carol",
+                "email": "carol@x.io",
+                "phone": "111"
+              },
+              {
+                "name": "Dave",
+                "email": "dave@x.io",
+                "phone": "222"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Carol",
+              "email": "carol@x.io",
+              "phone": "111"
+            },
+            {
+              "name": "Dave",
+              "email": "dave@x.io",
+              "phone": "222"
+            }
+          ],
+          "visible": true
+        },
+        {
+          "name": "empty input",
+          "input": [
+            []
+          ],
+          "expected": [],
+          "visible": false
+        },
+        {
+          "name": "email whitespace and casing normalized, phone digits only",
+          "input": [
+            [
+              {
+                "name": "Eve",
+                "email": "  Eve@Example.COM ",
+                "phone": "+1 555 000 9999"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Eve",
+              "email": "eve@example.com",
+              "phone": "15550009999"
+            }
+          ],
+          "visible": false
+        },
+        {
+          "name": "phone 'N/A' normalizes to empty then filled by later row",
+          "input": [
+            [
+              {
+                "name": "Frank",
+                "email": "frank@co.com",
+                "phone": "N/A"
+              },
+              {
+                "name": "",
+                "email": "FRANK@co.com",
+                "phone": "555.867.5309"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Frank",
+              "email": "frank@co.com",
+              "phone": "5558675309"
+            }
+          ],
+          "visible": false
+        },
+        {
+          "name": "first non-empty wins across three duplicates",
+          "input": [
+            [
+              {
+                "name": "",
+                "email": "gina@mail.com",
+                "phone": ""
+              },
+              {
+                "name": "Gina",
+                "email": "gina@mail.com",
+                "phone": ""
+              },
+              {
+                "name": "Regina",
+                "email": "gina@mail.com",
+                "phone": "800-555-0000"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Gina",
+              "email": "gina@mail.com",
+              "phone": "8005550000"
+            }
+          ],
+          "visible": false
+        },
+        {
+          "name": "interleaved emails keep first-seen order",
+          "input": [
+            [
+              {
+                "name": "Hank",
+                "email": "hank@a.com",
+                "phone": "1"
+              },
+              {
+                "name": "Ivy",
+                "email": "ivy@b.com",
+                "phone": "2"
+              },
+              {
+                "name": "Hank",
+                "email": "HANK@a.com",
+                "phone": "1"
+              },
+              {
+                "name": "Jane",
+                "email": "jane@c.com",
+                "phone": "3"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Hank",
+              "email": "hank@a.com",
+              "phone": "1"
+            },
+            {
+              "name": "Ivy",
+              "email": "ivy@b.com",
+              "phone": "2"
+            },
+            {
+              "name": "Jane",
+              "email": "jane@c.com",
+              "phone": "3"
+            }
+          ],
+          "visible": false
+        },
+        {
+          "name": "all rows are duplicates of one contact",
+          "input": [
+            [
+              {
+                "name": "Kim",
+                "email": "kim@z.com",
+                "phone": "999-0001"
+              },
+              {
+                "name": "Kim",
+                "email": "kim@z.com",
+                "phone": "9990001"
+              },
+              {
+                "name": "Kim",
+                "email": "kim@z.com",
+                "phone": "999.0001"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Kim",
+              "email": "kim@z.com",
+              "phone": "9990001"
+            }
+          ],
+          "visible": false
+        },
+        {
+          "name": "name only in later row, phone only in first",
+          "input": [
+            [
+              {
+                "name": "",
+                "email": "lee@q.com",
+                "phone": "212-555-7777"
+              },
+              {
+                "name": "Lee",
+                "email": "lee@q.com",
+                "phone": "212-555-7777"
+              }
+            ]
+          ],
+          "expected": [
+            {
+              "name": "Lee",
+              "email": "lee@q.com",
+              "phone": "2125557777"
+            }
+          ],
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Boot-time config validator for a 12-factor service",
+    "role_family": "backend",
+    "difficulty": "mid",
+    "response_type": "code",
+    "languages": [
+      "python"
+    ],
+    "duration_minutes": 40,
+    "prompt_md": "## Config loader for a 12-factor service\n\nOur services read configuration from the environment, the [12-factor](https://12factor.net/config) way. Before boot, an init step collects raw `KEY`/`value` pairs and must turn them into a typed, validated config, or refuse to start with a precise list of everything that is wrong. Failing loudly at boot beats a service that limps along with a bad port or a missing database URL. You are writing that validator.\n\nImplement `load_config(pairs)`.\n\n- `pairs` is a list of `[key, value]` pairs. Both elements are strings. Keys may repeat.\n- Return a dict `{\"valid\": {...}, \"errors\": [...]}`.\n  - `valid` maps each successfully resolved **known** key to its typed value.\n  - `errors` is a list of error-code strings, **sorted ascending, with no duplicates**.\n\n### Known keys and rules\n\n| Key | Required | Type / rule | Default |\n|-----|----------|-------------|---------|\n| `PORT` | yes | integer in `1..65535` | n/a |\n| `DATABASE_URL` | yes | non-empty string (kept as-is) | n/a |\n| `DEBUG` | no | boolean: `true`/`false`, case-insensitive, becomes `True`/`False` | `False` |\n| `LOG_LEVEL` | no | one of `debug`/`info`/`warn`/`error`, case-insensitive, normalized to lowercase | `\"info\"` |\n| `MAX_CONNECTIONS` | no | integer `>= 1` | `10` |\n\nInteger parsing is strict base-10: an optional single leading `-`, then ASCII digits only. No `+`, no surrounding whitespace, no decimals, no underscores. So `\"8080\"` and `\"-1\"` parse (and are then range-checked), while `\"80 \"`, `\"8.0\"`, `\"1_000\"`, and `\"\"` do not. Booleans accept only `true`/`false` in any casing (`\"1\"`, `\"yes\"`, `\"on\"` are invalid).\n\n### Resolution rules\n\n1. **Known key, valid value**: put the typed value in `valid`.\n2. **Required key absent**: add `MISSING:<KEY>` (and it is not in `valid`).\n3. **Optional key absent**: put its default in `valid`.\n4. **Known key present but invalid** (bad type/range/enum, or empty `DATABASE_URL`): add `INVALID:<KEY>` and leave it out of `valid` (no default fallback).\n5. **Known key appearing 2+ times**: add `DUPLICATE:<KEY>`, leave it out of `valid`, and emit no other code for it.\n6. **Unknown key**: add a single `UNKNOWN:<KEY>` (once, even if it repeats). Duplicate detection does not apply to unknown keys.\n\nCollect **all** problems in one pass; do not stop at the first.\n\n### Contract\n\n```\nload_config(pairs: list[list[str]]) -> {\"valid\": dict, \"errors\": list[str]}\n```\n\n### Examples\n\nEverything present and valid:\n\n```python\nload_config([\n    [\"PORT\", \"8080\"],\n    [\"DATABASE_URL\", \"postgres://localhost/app\"],\n    [\"DEBUG\", \"true\"],\n    [\"LOG_LEVEL\", \"INFO\"],\n    [\"MAX_CONNECTIONS\", \"25\"],\n])\n# {\"valid\": {\"PORT\": 8080, \"DATABASE_URL\": \"postgres://localhost/app\",\n#            \"DEBUG\": True, \"LOG_LEVEL\": \"info\", \"MAX_CONNECTIONS\": 25},\n#  \"errors\": []}\n```\n\nOnly the required keys are set; optionals fall back to defaults:\n\n```python\nload_config([[\"PORT\", \"5432\"], [\"DATABASE_URL\", \"postgres://db/main\"]])\n# {\"valid\": {\"PORT\": 5432, \"DATABASE_URL\": \"postgres://db/main\",\n#            \"DEBUG\": False, \"LOG_LEVEL\": \"info\", \"MAX_CONNECTIONS\": 10},\n#  \"errors\": []}\n```\n\nOut-of-range port, missing URL, bad boolean (note valid optionals still resolve):\n\n```python\nload_config([[\"PORT\", \"70000\"], [\"DEBUG\", \"yes\"]])\n# {\"valid\": {\"LOG_LEVEL\": \"info\", \"MAX_CONNECTIONS\": 10},\n#  \"errors\": [\"INVALID:DEBUG\", \"INVALID:PORT\", \"MISSING:DATABASE_URL\"]}\n```\n\nYou may use AI assistance. What we care about is whether the resulting validator is correct, handles the messy edges, and reads clearly.",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "Core behavior is right: required keys enforced, defaults applied for absent optionals, PORT range 1-65535 and MAX_CONNECTIONS >= 1 checked, DEBUG parsed as a case-insensitive boolean, LOG_LEVEL validated and lowercased, and valid typed values placed in `valid`. `errors` is sorted ascending with no duplicates and uses the exact code format.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles the messy cases: strict integer parsing rejects whitespace/decimals/underscores/`+`, empty input yields both MISSING codes plus optional defaults, present-but-invalid required keys emit INVALID (not MISSING), empty DATABASE_URL is INVALID, duplicate known keys emit DUPLICATE and suppress other codes for that key, and unknown keys emit a single UNKNOWN without triggering duplicate logic.",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Clear, maintainable structure: rules and constants are not deeply nested or copy-pasted per key, naming is sensible, and the flow is easy to follow. A reviewer should be able to add a new key or rule without rewriting the function.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.py",
+        "content": "def load_config(pairs):\n    # pairs: list of [key, value] string pairs (keys may repeat).\n    # Return {\"valid\": {<known key>: <typed value>}, \"errors\": [<sorted code strings>]}.\n    pass\n",
+        "language": "python"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "load_config",
+      "entry_file": "solution.py",
+      "language": "python",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "all keys present and valid",
+          "input": [
+            [
+              [
+                "PORT",
+                "8080"
+              ],
+              [
+                "DATABASE_URL",
+                "postgres://localhost/app"
+              ],
+              [
+                "DEBUG",
+                "true"
+              ],
+              [
+                "LOG_LEVEL",
+                "INFO"
+              ],
+              [
+                "MAX_CONNECTIONS",
+                "25"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "PORT": 8080,
+              "DATABASE_URL": "postgres://localhost/app",
+              "DEBUG": true,
+              "LOG_LEVEL": "info",
+              "MAX_CONNECTIONS": 25
+            },
+            "errors": []
+          },
+          "visible": true
+        },
+        {
+          "name": "only required keys, optionals default",
+          "input": [
+            [
+              [
+                "PORT",
+                "5432"
+              ],
+              [
+                "DATABASE_URL",
+                "postgres://db/main"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "PORT": 5432,
+              "DATABASE_URL": "postgres://db/main",
+              "DEBUG": false,
+              "LOG_LEVEL": "info",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": []
+          },
+          "visible": true
+        },
+        {
+          "name": "out-of-range port, missing url, bad bool",
+          "input": [
+            [
+              [
+                "PORT",
+                "70000"
+              ],
+              [
+                "DEBUG",
+                "yes"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "LOG_LEVEL": "info",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": [
+              "INVALID:DEBUG",
+              "INVALID:PORT",
+              "MISSING:DATABASE_URL"
+            ]
+          },
+          "visible": true
+        },
+        {
+          "name": "empty input yields both missing plus defaults",
+          "input": [
+            []
+          ],
+          "expected": {
+            "valid": {
+              "DEBUG": false,
+              "LOG_LEVEL": "info",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": [
+              "MISSING:DATABASE_URL",
+              "MISSING:PORT"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "unknown key flagged once",
+          "input": [
+            [
+              [
+                "PORT",
+                "3000"
+              ],
+              [
+                "DATABASE_URL",
+                "mysql://x"
+              ],
+              [
+                "FOO",
+                "bar"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "PORT": 3000,
+              "DATABASE_URL": "mysql://x",
+              "DEBUG": false,
+              "LOG_LEVEL": "info",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": [
+              "UNKNOWN:FOO"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "port lower boundary valid, max_connections 0 invalid",
+          "input": [
+            [
+              [
+                "PORT",
+                "1"
+              ],
+              [
+                "DATABASE_URL",
+                "x"
+              ],
+              [
+                "MAX_CONNECTIONS",
+                "0"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "PORT": 1,
+              "DATABASE_URL": "x",
+              "DEBUG": false,
+              "LOG_LEVEL": "info"
+            },
+            "errors": [
+              "INVALID:MAX_CONNECTIONS"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "port upper boundary valid, empty url invalid, mixed-case bool",
+          "input": [
+            [
+              [
+                "PORT",
+                "65535"
+              ],
+              [
+                "DATABASE_URL",
+                ""
+              ],
+              [
+                "DEBUG",
+                "FALSE"
+              ],
+              [
+                "LOG_LEVEL",
+                "warn"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "PORT": 65535,
+              "DEBUG": false,
+              "LOG_LEVEL": "warn",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": [
+              "INVALID:DATABASE_URL"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "port just over the upper boundary",
+          "input": [
+            [
+              [
+                "PORT",
+                "65536"
+              ],
+              [
+                "DATABASE_URL",
+                "db"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "DATABASE_URL": "db",
+              "DEBUG": false,
+              "LOG_LEVEL": "info",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": [
+              "INVALID:PORT"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "duplicate known key suppresses value and other codes",
+          "input": [
+            [
+              [
+                "PORT",
+                "8080"
+              ],
+              [
+                "PORT",
+                "9090"
+              ],
+              [
+                "DATABASE_URL",
+                "db"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "DATABASE_URL": "db",
+              "DEBUG": false,
+              "LOG_LEVEL": "info",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": [
+              "DUPLICATE:PORT"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "strict int rejects trailing space, bad bool and enum",
+          "input": [
+            [
+              [
+                "PORT",
+                "80 "
+              ],
+              [
+                "DATABASE_URL",
+                "db"
+              ],
+              [
+                "DEBUG",
+                "1"
+              ],
+              [
+                "LOG_LEVEL",
+                "trace"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "DATABASE_URL": "db",
+              "MAX_CONNECTIONS": 10
+            },
+            "errors": [
+              "INVALID:DEBUG",
+              "INVALID:LOG_LEVEL",
+              "INVALID:PORT"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "negative port rejected, large max_connections ok, uppercase enum",
+          "input": [
+            [
+              [
+                "PORT",
+                "-1"
+              ],
+              [
+                "DATABASE_URL",
+                "db"
+              ],
+              [
+                "MAX_CONNECTIONS",
+                "1000"
+              ],
+              [
+                "LOG_LEVEL",
+                "ERROR"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "DATABASE_URL": "db",
+              "MAX_CONNECTIONS": 1000,
+              "LOG_LEVEL": "error",
+              "DEBUG": false
+            },
+            "errors": [
+              "INVALID:PORT"
+            ]
+          },
+          "visible": false
+        },
+        {
+          "name": "combined: non-int port, duplicate url, unknown, negative max",
+          "input": [
+            [
+              [
+                "PORT",
+                "abc"
+              ],
+              [
+                "DATABASE_URL",
+                "db"
+              ],
+              [
+                "DATABASE_URL",
+                "db2"
+              ],
+              [
+                "EXTRA",
+                "x"
+              ],
+              [
+                "MAX_CONNECTIONS",
+                "-3"
+              ]
+            ]
+          ],
+          "expected": {
+            "valid": {
+              "DEBUG": false,
+              "LOG_LEVEL": "info"
+            },
+            "errors": [
+              "DUPLICATE:DATABASE_URL",
+              "INVALID:MAX_CONNECTIONS",
+              "INVALID:PORT",
+              "UNKNOWN:EXTRA"
+            ]
+          },
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Scheduling Assistant: Compute a Guest's Open Booking Slots",
+    "role_family": "fullstack",
+    "difficulty": "mid",
+    "response_type": "code",
+    "languages": [
+      "python"
+    ],
+    "duration_minutes": 35,
+    "prompt_md": "You're on the team building the availability engine behind a Calendly-style booking page. When a guest opens someone's link, we need to show the **open slots** they could book that day. The raw input we get from the calendar sync is messy: a host's booked events for the day come back **unsorted**, sometimes **overlap** each other, sometimes sit **back-to-back**, and occasionally **spill past** the host's working hours (an all-day event, or a meeting that started before the workday). Your job is the pure function that turns that mess into clean open slots.\n\nAll times are **integer minutes since midnight** (so `540` = 9:00 AM, `1020` = 5:00 PM). A slot `[start, end]` means busy/free from `start` up to but not including `end`.\n\n## Task\n\nImplement:\n\n```python\ndef find_open_slots(busy, day_start, day_end):\n    ...\n```\n\n- `busy`: a list of `[start, end]` intervals when the host is booked. **Not sorted. May overlap, touch, duplicate, or extend outside the working window.**\n- `day_start`, `day_end`: the host's working window for the day, as minutes since midnight (`day_start < day_end`).\n\n**Return** the list of open `[start, end]` slots inside `[day_start, day_end]`, **sorted by start time**, with overlapping/adjacent busy time collapsed. Rules that matter:\n\n- **Clip** everything to the working window — a meeting `[480, 600]` with `day_start = 540` only blocks `[540, 600]`; a meeting entirely outside the window blocks nothing.\n- **Never emit a zero-length slot.** Back-to-back meetings (`[540,600]` then `[600,720]`) leave no gap between them, and a meeting starting exactly at `day_start` produces no leading `[540,540]`.\n- If the host is free all day, return one slot covering the whole window. If fully booked, return `[]`.\n\n## Examples\n\n```python\n# A normal day: two meetings, three open gaps around them.\nfind_open_slots([[600, 660], [780, 810]], 540, 1020)\n# -> [[540, 600], [660, 780], [810, 1020]]\n\n# No meetings booked -> the whole working day is open.\nfind_open_slots([], 540, 1020)\n# -> [[540, 1020]]\n\n# Back-to-back meetings touch at 600 -> no zero-length gap between them.\nfind_open_slots([[540, 600], [600, 720]], 540, 1020)\n# -> [[720, 1020]]\n```\n\nAI tools are allowed. We care that the function is correct on the messy real-world inputs above, not that you wrote it unaided.",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "Returns the correct sorted, non-overlapping open slots for typical inputs, including clipping busy intervals to [day_start, day_end] and collapsing overlapping/duplicate/unsorted busy intervals.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles empty busy list, fully-booked day (returns []), back-to-back/touching meetings without emitting zero-length slots, meetings at the exact window boundaries, and intervals fully or partially outside the window.",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Clear, single-pass or clearly-structured logic with sensible names; no dead code or needless complexity for this scope.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.py",
+        "content": "def find_open_slots(busy, day_start, day_end):\n    # Return the open [start, end] slots within [day_start, day_end], sorted and merged.\n    pass\n",
+        "language": "python"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "find_open_slots",
+      "entry_file": "solution.py",
+      "language": "python",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "typical day",
+          "input": [
+            [
+              [
+                600,
+                660
+              ],
+              [
+                780,
+                810
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              540,
+              600
+            ],
+            [
+              660,
+              780
+            ],
+            [
+              810,
+              1020
+            ]
+          ],
+          "visible": true
+        },
+        {
+          "name": "empty busy is all free",
+          "input": [
+            [],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              540,
+              1020
+            ]
+          ],
+          "visible": true
+        },
+        {
+          "name": "back-to-back touching meetings",
+          "input": [
+            [
+              [
+                540,
+                600
+              ],
+              [
+                600,
+                720
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              720,
+              1020
+            ]
+          ],
+          "visible": true
+        },
+        {
+          "name": "fully booked returns empty",
+          "input": [
+            [
+              [
+                540,
+                1020
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [],
+          "visible": false
+        },
+        {
+          "name": "unsorted overlapping meetings",
+          "input": [
+            [
+              [
+                780,
+                840
+              ],
+              [
+                600,
+                660
+              ],
+              [
+                620,
+                700
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              540,
+              600
+            ],
+            [
+              700,
+              780
+            ],
+            [
+              840,
+              1020
+            ]
+          ],
+          "visible": false
+        },
+        {
+          "name": "clip meetings past the window",
+          "input": [
+            [
+              [
+                480,
+                600
+              ],
+              [
+                960,
+                1080
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              600,
+              960
+            ]
+          ],
+          "visible": false
+        },
+        {
+          "name": "meetings entirely outside window ignored",
+          "input": [
+            [
+              [
+                0,
+                300
+              ],
+              [
+                1100,
+                1200
+              ],
+              [
+                660,
+                720
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              540,
+              660
+            ],
+            [
+              720,
+              1020
+            ]
+          ],
+          "visible": false
+        },
+        {
+          "name": "meeting at exact day start",
+          "input": [
+            [
+              [
+                540,
+                660
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              660,
+              1020
+            ]
+          ],
+          "visible": false
+        },
+        {
+          "name": "meeting at exact day end",
+          "input": [
+            [
+              [
+                900,
+                1020
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              540,
+              900
+            ]
+          ],
+          "visible": false
+        },
+        {
+          "name": "nested and duplicate meetings",
+          "input": [
+            [
+              [
+                600,
+                900
+              ],
+              [
+                660,
+                720
+              ],
+              [
+                600,
+                900
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              540,
+              600
+            ],
+            [
+              900,
+              1020
+            ]
+          ],
+          "visible": false
+        },
+        {
+          "name": "non 9-to-5 custom window",
+          "input": [
+            [
+              [
+                0,
+                30
+              ],
+              [
+                45,
+                60
+              ],
+              [
+                90,
+                120
+              ]
+            ],
+            0,
+            120
+          ],
+          "expected": [
+            [
+              30,
+              45
+            ],
+            [
+              60,
+              90
+            ]
+          ],
+          "visible": false
+        },
+        {
+          "name": "single meeting in the middle",
+          "input": [
+            [
+              [
+                720,
+                780
+              ]
+            ],
+            540,
+            1020
+          ],
+          "expected": [
+            [
+              540,
+              720
+            ],
+            [
+              780,
+              1020
+            ]
+          ],
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Normalize Messy US Phone Numbers to E.164",
+    "role_family": "backend",
+    "difficulty": "junior",
+    "response_type": "code",
+    "languages": [
+      "python"
+    ],
+    "duration_minutes": 30,
+    "prompt_md": "You're cleaning up a `contacts` table that was merged from three different CRMs. The `phone` column is a mess: some numbers have parentheses and dashes, some carry a leading country code, some use dots, and plenty of rows are garbage (typos, empty strings, letters like `800-FLOWERS`). Before this data can feed the outbound-SMS system, every number has to be normalized to E.164 (`+1XXXXXXXXXX`) or flagged as invalid so a human can review it.\n\n## Task\n\nWrite `normalize_phones(numbers)` that takes a list of raw phone strings and returns a **new list of the same length, in the same order**. For each entry, return the normalized `+1XXXXXXXXXX` string, or `None` if it is not a valid US number.\n\n## Rules (US-only assumption)\n\n- Ignore these formatting characters anywhere in the string: spaces, `(`, `)`, `-`, and `.`. A `+` only carries meaning as the very first character.\n- After stripping formatting, the remaining value must be **all digits**. Anything else (letters, stray symbols, an empty string) is invalid.\n- A valid number is either **10 digits**, or **11 digits starting with the country code `1`**. If a value starts with `+`, it must be `+1` followed by exactly 10 more digits.\n- The **area code** (the first of the 10 core digits) must start with `2`-`9`. Numbers whose area code starts with `0` or `1` are invalid.\n- Output is always `+1` followed by the 10 core digits. Invalid entries become `None`; order is preserved.\n\n## I/O contract\n\n- Function: `normalize_phones(numbers)`\n- `numbers`: `list[str]`\n- Returns: `list[str | None]` of the same length as `numbers`\n\n## Examples\n\n```python\nnormalize_phones([\"(415) 555-1234\", \"1-800-555-0199\", \"hello\", \"12345\"])\n# -> [\"+14155551234\", \"+18005550199\", None, None]\n\nnormalize_phones([\"+1 (212) 555-0198\", \"4155551234\"])\n# -> [\"+12125550198\", \"+14155551234\"]\n\nnormalize_phones([\"415.555.1234\", \"\"])\n# -> [\"+14155551234\", None]\n```\n\nYou may use AI assistance. Aim for clear, readable code that a teammate could maintain; the hidden tests exercise the messy edge cases described above.",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "Correctly normalizes well-formed inputs (plain 10-digit, formatted with parens/dashes/dots/spaces, and 11-digit or +1 country-code forms) to +1XXXXXXXXXX, preserving input order and list length.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles invalid/garbage inputs by returning None: empty string, too short/too long, non-digit characters (letters), wrong-length after a leading +, and area codes starting with 0 or 1. Handles an empty input list.",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Clear structure and naming; formatting-strip and validation logic is easy to follow; no dead code or needless complexity for a junior-level data-cleaning task.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.py",
+        "content": "def normalize_phones(numbers):\n    # Return a list where each raw phone string becomes \"+1XXXXXXXXXX\", or None if invalid.\n    pass\n",
+        "language": "python"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "normalize_phones",
+      "entry_file": "solution.py",
+      "language": "python",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "mixed formatted, garbage, and short",
+          "input": [
+            [
+              "(415) 555-1234",
+              "1-800-555-0199",
+              "hello",
+              "12345"
+            ]
+          ],
+          "expected": [
+            "+14155551234",
+            "+18005550199",
+            null,
+            null
+          ],
+          "visible": true
+        },
+        {
+          "name": "plus-prefixed e164 and plain 10-digit",
+          "input": [
+            [
+              "+1 (212) 555-0198",
+              "4155551234"
+            ]
+          ],
+          "expected": [
+            "+12125550198",
+            "+14155551234"
+          ],
+          "visible": true
+        },
+        {
+          "name": "dot-separated and empty string",
+          "input": [
+            [
+              "415.555.1234",
+              ""
+            ]
+          ],
+          "expected": [
+            "+14155551234",
+            null
+          ],
+          "visible": true
+        },
+        {
+          "name": "empty input list",
+          "input": [
+            []
+          ],
+          "expected": [],
+          "visible": false
+        },
+        {
+          "name": "11 digits not starting with 1",
+          "input": [
+            [
+              "23125550198"
+            ]
+          ],
+          "expected": [
+            null
+          ],
+          "visible": false
+        },
+        {
+          "name": "too short (9 digits)",
+          "input": [
+            [
+              "415555123"
+            ]
+          ],
+          "expected": [
+            null
+          ],
+          "visible": false
+        },
+        {
+          "name": "area code starts with 1",
+          "input": [
+            [
+              "1155551234"
+            ]
+          ],
+          "expected": [
+            null
+          ],
+          "visible": false
+        },
+        {
+          "name": "area code starts with 0",
+          "input": [
+            [
+              "0155551234"
+            ]
+          ],
+          "expected": [
+            null
+          ],
+          "visible": false
+        },
+        {
+          "name": "letters embedded (vanity number)",
+          "input": [
+            [
+              "800-FLOWERS"
+            ]
+          ],
+          "expected": [
+            null
+          ],
+          "visible": false
+        },
+        {
+          "name": "already normalized e164",
+          "input": [
+            [
+              "+18005550199"
+            ]
+          ],
+          "expected": [
+            "+18005550199"
+          ],
+          "visible": false
+        },
+        {
+          "name": "plus prefix with wrong length",
+          "input": [
+            [
+              "+14155551234567"
+            ]
+          ],
+          "expected": [
+            null
+          ],
+          "visible": false
+        },
+        {
+          "name": "order preserved across valid and invalid",
+          "input": [
+            [
+              "9995551234",
+              "abc",
+              "+1 999 555 0000",
+              "1 (999) 555-0001",
+              "999-555-000"
+            ]
+          ],
+          "expected": [
+            "+19995551234",
+            null,
+            "+19995550000",
+            "+19995550001",
+            null
+          ],
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Offline Eval: Precision@K and Recall@K for a Ranking Model",
+    "role_family": "ml",
+    "difficulty": "mid",
+    "response_type": "code",
+    "languages": [
+      "python"
+    ],
+    "duration_minutes": 35,
+    "prompt_md": "You are on the search-relevance team. A ranking model returns, for each query, a **ranked list of item ids** (most-relevant first). Ground truth is the **set of items a human judged relevant** for that query. Before shipping a model change, the offline eval harness needs the two workhorse top-K metrics for a single query: **precision@k** and **recall@k**. Implement the exact metric so every experiment reports the same numbers.\n\n## Task\n\nImplement:\n\n```python\ndef ranking_metrics(predicted, relevant, k):\n    ...\n```\n\n- `predicted`: `list` of item ids in **ranked order** (index 0 = top result). Ids are distinct; they may be ints or strings.\n- `relevant`: `list` of the item ids judged relevant (treat it as a **set** — distinct ids, order irrelevant).\n- `k`: positive `int` cutoff.\n\nLet `hits` = the number of the **top-k** predicted items (`predicted[:k]`) that are in `relevant`.\n\n- `precision_at_k = hits / k` — **always divide by the cutoff `k`**, even when `predicted` has fewer than `k` items.\n- `recall_at_k  = hits / (number of relevant items)`. If `relevant` is empty, `recall_at_k` is `0.0` (no division).\n\nReturn a dict, both values **rounded to 4 decimals** with Python's `round(x, 4)`:\n\n```python\n{\"precision_at_k\": <float>, \"recall_at_k\": <float>}\n```\n\nItems in `relevant` that fall **outside the top-k** must not count — ranking order matters.\n\n## Examples\n\n```python\n# Example 1\nranking_metrics([1, 2, 3, 4, 5], [1, 3, 5, 7], 3)\n# top-3 = [1,2,3]; hits = {1,3} = 2\n# precision = 2/3 = 0.6667, recall = 2/4 = 0.5\n# -> {\"precision_at_k\": 0.6667, \"recall_at_k\": 0.5}\n\n# Example 2\nranking_metrics([10, 20, 30, 40], [20, 40, 60], 2)\n# top-2 = [10,20]; hits = {20} = 1\n# precision = 1/2 = 0.5, recall = 1/3 = 0.3333\n# -> {\"precision_at_k\": 0.5, \"recall_at_k\": 0.3333}\n\n# Example 3\nranking_metrics([5, 6, 7, 8], [5, 6, 7, 8], 4)\n# top-4 = everything; hits = 4\n# -> {\"precision_at_k\": 1.0, \"recall_at_k\": 1.0}\n```\n\nStandard library only.",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "hits counts top-k predicted items present in the relevant set; precision = hits/k and recall = hits/|relevant| are computed and rounded to 4 decimals; the standard visible cases pass.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles empty relevant set (recall 0.0, no ZeroDivisionError), k greater than len(predicted) (still divides precision by k), a zero-hit query, k=1, string ids, and relevant items ranked beyond the cutoff (not counted).",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Clear, direct implementation: relevant converted to a set for O(1) membership, single-pass hit count, no dead code or needless complexity.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.py",
+        "content": "def ranking_metrics(predicted, relevant, k):\n    # Return {\"precision_at_k\": float, \"recall_at_k\": float}, each round(x, 4).\n    pass\n",
+        "language": "python"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "ranking_metrics",
+      "entry_file": "solution.py",
+      "language": "python",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "example_1_top3",
+          "input": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            [
+              1,
+              3,
+              5,
+              7
+            ],
+            3
+          ],
+          "expected": {
+            "precision_at_k": 0.6667,
+            "recall_at_k": 0.5
+          },
+          "visible": true
+        },
+        {
+          "name": "example_2_top2",
+          "input": [
+            [
+              10,
+              20,
+              30,
+              40
+            ],
+            [
+              20,
+              40,
+              60
+            ],
+            2
+          ],
+          "expected": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 0.3333
+          },
+          "visible": true
+        },
+        {
+          "name": "example_3_perfect",
+          "input": [
+            [
+              5,
+              6,
+              7,
+              8
+            ],
+            [
+              5,
+              6,
+              7,
+              8
+            ],
+            4
+          ],
+          "expected": {
+            "precision_at_k": 1,
+            "recall_at_k": 1
+          },
+          "visible": true
+        },
+        {
+          "name": "no_hits",
+          "input": [
+            [
+              1,
+              2,
+              3
+            ],
+            [
+              4,
+              5,
+              6
+            ],
+            3
+          ],
+          "expected": {
+            "precision_at_k": 0,
+            "recall_at_k": 0
+          },
+          "visible": false
+        },
+        {
+          "name": "empty_relevant_no_div",
+          "input": [
+            [
+              1,
+              2,
+              3
+            ],
+            [],
+            2
+          ],
+          "expected": {
+            "precision_at_k": 0,
+            "recall_at_k": 0
+          },
+          "visible": false
+        },
+        {
+          "name": "k_greater_than_len_divides_by_k",
+          "input": [
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            5
+          ],
+          "expected": {
+            "precision_at_k": 0.4,
+            "recall_at_k": 0.5
+          },
+          "visible": false
+        },
+        {
+          "name": "k1_top_result_miss",
+          "input": [
+            [
+              7,
+              3,
+              9,
+              1
+            ],
+            [
+              3,
+              9
+            ],
+            1
+          ],
+          "expected": {
+            "precision_at_k": 0,
+            "recall_at_k": 0
+          },
+          "visible": false
+        },
+        {
+          "name": "k1_top_result_hit",
+          "input": [
+            [
+              3,
+              7,
+              9
+            ],
+            [
+              3,
+              9
+            ],
+            1
+          ],
+          "expected": {
+            "precision_at_k": 1,
+            "recall_at_k": 0.5
+          },
+          "visible": false
+        },
+        {
+          "name": "precision_rounds_to_4dp",
+          "input": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            [
+              1,
+              2,
+              4,
+              7
+            ],
+            7
+          ],
+          "expected": {
+            "precision_at_k": 0.5714,
+            "recall_at_k": 1
+          },
+          "visible": false
+        },
+        {
+          "name": "recall_over_six_relevant",
+          "input": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            [
+              1,
+              2,
+              7,
+              8,
+              9,
+              10
+            ],
+            5
+          ],
+          "expected": {
+            "precision_at_k": 0.4,
+            "recall_at_k": 0.3333
+          },
+          "visible": false
+        },
+        {
+          "name": "string_ids_relevant_beyond_cutoff",
+          "input": [
+            [
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            [
+              "a",
+              "d"
+            ],
+            2
+          ],
+          "expected": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 0.5
+          },
+          "visible": false
+        },
+        {
+          "name": "recall_over_three_relevant",
+          "input": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            [
+              1,
+              3,
+              5
+            ],
+            4
+          ],
+          "expected": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 0.6667
+          },
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Checkout State Machine Reducer",
+    "role_family": "frontend",
+    "difficulty": "senior",
+    "response_type": "code",
+    "languages": [
+      "javascript"
+    ],
+    "duration_minutes": 35,
+    "prompt_md": "You are building the checkout flow for an e-commerce frontend. The UI dispatches a stream of user and system actions (add to cart, checkout, payment result), and you need one pure reducer that folds those actions, in order, into the current checkout state. Defensive UI logic is the point here: an action that does not apply to the current state must be **ignored** (state unchanged), but the reducer must **remember** that at least one illegal action was attempted so the UI can later surface a \"that didn't work\" warning.\n\n## Task\n\nImplement `checkout(events)`, where `events` is an array of action-name strings applied in order starting from the state `\"idle\"`. Fold the events through the state machine below and return the final state plus whether any illegal transition was attempted.\n\nThe five states are: `idle`, `cart`, `paying`, `paid`, `failed`.\n\n**Transition table** (any `(state, event)` pair not listed is illegal for that state):\n\n| From state | Event | To state |\n|------------|----------|----------|\n| `idle`   | `ADD_ITEM` | `cart`   |\n| `cart`   | `ADD_ITEM` | `cart`   |\n| `cart`   | `CHECKOUT` | `paying` |\n| `cart`   | `RESET`    | `idle`   |\n| `paying` | `SUCCESS`  | `paid`   |\n| `paying` | `FAIL`     | `failed` |\n| `paid`   | `RESET`    | `idle`   |\n| `failed` | `RETRY`    | `paying` |\n| `failed` | `RESET`    | `idle`   |\n\n## Rules\n\n- Start at state `\"idle\"` with `invalidAttempted` set to `false`.\n- For each event in order: if a transition exists for the current `(state, event)`, move to the target state. Otherwise leave `state` unchanged and set `invalidAttempted` to `true`.\n- Unknown event names (anything not in the table) are illegal and flag `invalidAttempted`.\n- An empty `events` list is valid and leaves you at `idle`.\n\n## I/O contract\n\n- Function: `checkout(events)`\n- Argument: `events` — an array of `string` action names, e.g. `[\"ADD_ITEM\", \"CHECKOUT\", \"SUCCESS\"]`\n- Returns an object **with keys in this order**: `{ state, invalidAttempted }`, where `state` is one of the five state strings and `invalidAttempted` is a `boolean`.\n\n## Examples\n\n```js\n// 1) Happy path: cart -> pay -> paid, nothing illegal\ncheckout([\"ADD_ITEM\", \"CHECKOUT\", \"SUCCESS\"]);\n// => { state: \"paid\", invalidAttempted: false }\n\n// 2) Payment fails, candidate retries, then succeeds\ncheckout([\"ADD_ITEM\", \"CHECKOUT\", \"FAIL\", \"RETRY\", \"SUCCESS\"]);\n// => { state: \"paid\", invalidAttempted: false }\n\n// 3) Trying to pay before there is even a cart is illegal\ncheckout([\"SUCCESS\"]);\n// => { state: \"idle\", invalidAttempted: true }\n```",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "Reducer produces the correct final state for valid event sequences across all states (idle/cart/paying/paid/failed), following the transition table exactly and starting from idle.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Illegal transitions are ignored (state unchanged) yet set invalidAttempted true; handles empty input, unknown event names, and repeated/mixed sequences correctly.",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "State machine is expressed as a clear data-driven transition map (not a sprawl of nested ifs); pure function, no shared mutation, returns the exact { state, invalidAttempted } shape.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.js",
+        "content": "// Drive a checkout state machine over an ordered list of event-name strings,\n// starting from \"idle\". Return { state, invalidAttempted } (keys in that order).\nfunction checkout(events) {\n  // your code here\n}\n\nmodule.exports = { checkout };\n",
+        "language": "javascript"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "checkout",
+      "entry_file": "solution.js",
+      "language": "node",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "happy path -> paid",
+          "input": [
+            [
+              "ADD_ITEM",
+              "CHECKOUT",
+              "SUCCESS"
+            ]
+          ],
+          "expected": {
+            "state": "paid",
+            "invalidAttempted": false
+          },
+          "visible": true
+        },
+        {
+          "name": "fail then retry then success",
+          "input": [
+            [
+              "ADD_ITEM",
+              "CHECKOUT",
+              "FAIL",
+              "RETRY",
+              "SUCCESS"
+            ]
+          ],
+          "expected": {
+            "state": "paid",
+            "invalidAttempted": false
+          },
+          "visible": true
+        },
+        {
+          "name": "pay before checkout is invalid",
+          "input": [
+            [
+              "SUCCESS"
+            ]
+          ],
+          "expected": {
+            "state": "idle",
+            "invalidAttempted": true
+          },
+          "visible": true
+        },
+        {
+          "name": "empty event list stays idle",
+          "input": [
+            []
+          ],
+          "expected": {
+            "state": "idle",
+            "invalidAttempted": false
+          },
+          "visible": false
+        },
+        {
+          "name": "add several items stays in cart",
+          "input": [
+            [
+              "ADD_ITEM",
+              "ADD_ITEM",
+              "ADD_ITEM"
+            ]
+          ],
+          "expected": {
+            "state": "cart",
+            "invalidAttempted": false
+          },
+          "visible": false
+        },
+        {
+          "name": "reset after paid returns to idle",
+          "input": [
+            [
+              "ADD_ITEM",
+              "CHECKOUT",
+              "SUCCESS",
+              "RESET"
+            ]
+          ],
+          "expected": {
+            "state": "idle",
+            "invalidAttempted": false
+          },
+          "visible": false
+        },
+        {
+          "name": "double checkout flags invalid",
+          "input": [
+            [
+              "ADD_ITEM",
+              "CHECKOUT",
+              "CHECKOUT",
+              "SUCCESS"
+            ]
+          ],
+          "expected": {
+            "state": "paid",
+            "invalidAttempted": true
+          },
+          "visible": false
+        },
+        {
+          "name": "unknown event name flags invalid",
+          "input": [
+            [
+              "ADD_ITEM",
+              "FOO",
+              "CHECKOUT"
+            ]
+          ],
+          "expected": {
+            "state": "paying",
+            "invalidAttempted": true
+          },
+          "visible": false
+        },
+        {
+          "name": "fail then reset recovers to idle",
+          "input": [
+            [
+              "ADD_ITEM",
+              "CHECKOUT",
+              "FAIL",
+              "RESET"
+            ]
+          ],
+          "expected": {
+            "state": "idle",
+            "invalidAttempted": false
+          },
+          "visible": false
+        },
+        {
+          "name": "reset at idle is invalid",
+          "input": [
+            [
+              "RESET"
+            ]
+          ],
+          "expected": {
+            "state": "idle",
+            "invalidAttempted": true
+          },
+          "visible": false
+        },
+        {
+          "name": "full lifecycle then re-purchase",
+          "input": [
+            [
+              "ADD_ITEM",
+              "CHECKOUT",
+              "FAIL",
+              "RETRY",
+              "FAIL",
+              "RETRY",
+              "SUCCESS",
+              "RESET",
+              "ADD_ITEM",
+              "CHECKOUT",
+              "SUCCESS"
+            ]
+          ],
+          "expected": {
+            "state": "paid",
+            "invalidAttempted": false
+          },
+          "visible": false
+        },
+        {
+          "name": "invalid events mixed, ends idle",
+          "input": [
+            [
+              "SUCCESS",
+              "FAIL",
+              "ADD_ITEM",
+              "RESET",
+              "CHECKOUT"
+            ]
+          ],
+          "expected": {
+            "state": "idle",
+            "invalidAttempted": true
+          },
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Retry-with-backoff schedule planner",
+    "role_family": "backend",
+    "difficulty": "senior",
+    "response_type": "code",
+    "languages": [
+      "python"
+    ],
+    "duration_minutes": 30,
+    "prompt_md": "A background worker in our billing service calls a flaky downstream payment API. Instead of sleeping inside the retry loop, we precompute the full retry *schedule* up front so we can log it, surface it in observability, and unit-test it without any timers. Your job is to write that planner: a pure function that returns the list of per-retry delays using **exponential backoff** capped at a ceiling.\n\nYou may use AI assistance. What we care about is a correct, defensible schedule and clean handling of the boundary cases a real retry planner hits in production.\n\n## Contract\n\nImplement:\n\n```python\ndef plan_retry_delays(attempts, base_ms, max_ms, jitter=False):\n    ...\n```\n\n- `attempts` (`int`, `>= 0`): how many retries to schedule. The returned list has exactly this length.\n- `base_ms` (`int`, `> 0`): the delay before the **first** retry.\n- `max_ms` (`int`, `> 0`): the ceiling. No single delay may exceed this.\n- `jitter` (`bool`, default `False`): leave the deterministic (`False`) path exact. Only the `jitter=False` behavior is graded.\n\nThe delay for retry `i` (0-indexed) is `base_ms * (2 ** i)`, **clamped** to at most `max_ms`. Return a `list[int]` of the delays in retry order. Return `[]` when `attempts == 0`.\n\n## Examples\n\n```python\nplan_retry_delays(5, 100, 2000)\n# -> [100, 200, 400, 800, 1600]      # pure doubling, nothing hits the cap\n\nplan_retry_delays(6, 100, 2000)\n# -> [100, 200, 400, 800, 1600, 2000]  # 6th would be 3200, clamped to 2000\n\nplan_retry_delays(0, 100, 2000)\n# -> []                              # no retries scheduled\n```\n\nNote the cap can bite immediately: if `max_ms < base_ms`, every delay is just `max_ms`.",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "correct",
+          "weight": 1,
+          "requirement": "For jitter=False, returns a list of length `attempts` where delay i is base_ms*2**i clamped to max_ms, in retry order. Matches the visible examples exactly.",
+          "points_possible": 5
+        },
+        {
+          "id": "edge_cases",
+          "weight": 1,
+          "requirement": "Handles attempts=0 (empty list), single attempt, the cap being reached exactly on a boundary, and max_ms <= base_ms (immediate clamp on every element).",
+          "points_possible": 3
+        },
+        {
+          "id": "readability",
+          "weight": 1,
+          "requirement": "Clear, minimal implementation: a single readable loop or comprehension, meaningful use of min() for the clamp, no dead code or needless abstraction.",
+          "points_possible": 2
+        }
+      ]
+    },
+    "starter_files": [
+      {
+        "path": "solution.py",
+        "content": "def plan_retry_delays(attempts, base_ms, max_ms, jitter=False):\n    # Return list[int] of per-retry delays: exponential backoff (base_ms*2**i) clamped to max_ms; jitter=False is the graded path.\n    pass\n",
+        "language": "python"
+      }
+    ],
+    "tests": {
+      "kind": "cases",
+      "entry_fn": "plan_retry_delays",
+      "entry_file": "solution.py",
+      "language": "python",
+      "timeout_ms": 15000,
+      "cases": [
+        {
+          "name": "basic doubling, no cap",
+          "input": [
+            5,
+            100,
+            2000
+          ],
+          "expected": [
+            100,
+            200,
+            400,
+            800,
+            1600
+          ],
+          "visible": true
+        },
+        {
+          "name": "last delay hits the cap",
+          "input": [
+            6,
+            100,
+            2000
+          ],
+          "expected": [
+            100,
+            200,
+            400,
+            800,
+            1600,
+            2000
+          ],
+          "visible": true
+        },
+        {
+          "name": "zero attempts is empty",
+          "input": [
+            0,
+            100,
+            2000
+          ],
+          "expected": [],
+          "visible": true
+        },
+        {
+          "name": "cap below base clamps immediately",
+          "input": [
+            3,
+            1000,
+            500
+          ],
+          "expected": [
+            500,
+            500,
+            500
+          ],
+          "visible": false
+        },
+        {
+          "name": "base equals max",
+          "input": [
+            4,
+            250,
+            250
+          ],
+          "expected": [
+            250,
+            250,
+            250,
+            250
+          ],
+          "visible": false
+        },
+        {
+          "name": "single attempt",
+          "input": [
+            1,
+            50,
+            10000
+          ],
+          "expected": [
+            50
+          ],
+          "visible": false
+        },
+        {
+          "name": "long schedule sustained at cap",
+          "input": [
+            10,
+            100,
+            2000
+          ],
+          "expected": [
+            100,
+            200,
+            400,
+            800,
+            1600,
+            2000,
+            2000,
+            2000,
+            2000,
+            2000
+          ],
+          "visible": false
+        },
+        {
+          "name": "base of one",
+          "input": [
+            5,
+            1,
+            8
+          ],
+          "expected": [
+            1,
+            2,
+            4,
+            8,
+            8
+          ],
+          "visible": false
+        },
+        {
+          "name": "exact cap boundary then clamp",
+          "input": [
+            4,
+            500,
+            2000
+          ],
+          "expected": [
+            500,
+            1000,
+            2000,
+            2000
+          ],
+          "visible": false
+        },
+        {
+          "name": "two attempts no cap",
+          "input": [
+            2,
+            300,
+            5000
+          ],
+          "expected": [
+            300,
+            600
+          ],
+          "visible": false
+        },
+        {
+          "name": "large values crossing cap",
+          "input": [
+            8,
+            1000,
+            30000
+          ],
+          "expected": [
+            1000,
+            2000,
+            4000,
+            8000,
+            16000,
+            30000,
+            30000,
+            30000
+          ],
+          "visible": false
+        }
+      ]
+    }
+  },
+  {
+    "title": "Design a Durable Postgres-Backed Job Queue (At-Least-Once + Idempotent Handlers)",
+    "role_family": "backend",
+    "difficulty": "senior",
+    "response_type": "markdown",
+    "languages": [],
+    "duration_minutes": 45,
+    "prompt_md": "> **Written design task (no auto-grading).** Write a design document in Markdown. There is no code to run and no unit tests. A reviewer scores your *reasoning, tradeoffs, and failure-mode coverage* against the rubric, with evidence quoted from your answer. AI tools are allowed; a shallow AI-generated \"best practices\" listicle that hand-waves failure modes will score poorly, so make the specifics defensible.\n\n## Context\n\nYou've joined the platform team at a mid-size commerce company. Background work today runs on a fragile hack: a cron job scrapes a `pending_jobs` table every minute and shells out to a worker. It regularly misfires. When a worker crashes mid-job, some order-confirmation emails never send, and others send **twice** (angry customers, duplicate partner webhooks). Job types include: `send_confirmation_email`, `call_partner_webhook`, and `reindex_inventory`. Volume is ~50 jobs/sec average, ~800/sec during flash sales.\n\nYou are asked to design a **durable job queue** the team can operate. Practical constraints:\n\n- **Postgres is the only durable datastore you may add to right now.** Redis is available but treated as a cache (not guaranteed durable across failover). If you want a dedicated broker (SQS, Kafka, RabbitMQ), you may propose it, but you must justify the operational cost and still describe the Postgres-native fallback.\n- Handlers call **external systems that are NOT transactional with your database** (an email API, partner HTTP endpoints). You cannot wrap \"send email\" and \"mark job done\" in one atomic commit.\n- **At-least-once delivery is required.** You may not claim exactly-once unless you precisely describe the mechanism that makes it true end-to-end (including the non-transactional side effect).\n- Multiple worker processes run concurrently and are expected to crash, deploy, and restart at any time.\n\n## What to deliver\n\nWrite a design doc that covers **all six** sections below. Depth and honest tradeoffs matter more than length.\n\n1. **Data model & lifecycle.** The job table (columns, states, indexes) and the enqueue → claim → execute → ack/fail lifecycle. Show how a worker *claims* a job so two workers never run the same job concurrently (e.g. `SELECT ... FOR UPDATE SKIP LOCKED`, a lease/visibility-timeout column, or another mechanism) and how a crashed worker's job becomes reclaimable.\n2. **Delivery semantics & idempotency.** Explain *why* at-least-once (not exactly-once) falls out of a non-transactional side effect plus a crash window. Then design how handlers stay correct under duplicate delivery: dedup keys, an idempotency/consumed-effects table, upserts, provider idempotency keys, etc. Be concrete about the *email* case specifically.\n3. **Retries, backoff & poison messages.** Retry policy (backoff curve, jitter, max attempts), how you distinguish retryable vs terminal failures, and what happens to a \"poison\" job that always fails. Describe the dead-letter path and how a job gets *out* of it (replay).\n4. **Ordering.** State exactly what ordering you guarantee (global? per-key? none?) and the throughput/latency tradeoff of that choice. Address head-of-line blocking: does one stuck `call_partner_webhook` for merchant A block merchant B?\n5. **Observability.** The metrics, logs, and alerts you'd ship (name specific signals, e.g. oldest-unacked-age, DLQ depth, attempt histogram). Describe concretely how an on-call engineer inspects and unsticks one failed job at 3am.\n6. **Failure modes.** Enumerate **at least four** concrete failure scenarios and how your design handles each. At minimum include: (a) worker crashes *after* the external side effect but *before* ack; (b) Postgres failover / a claimed job whose worker vanished; plus two more of your choosing (e.g. thundering-herd retries after an outage, clock skew on lease expiry, duplicate enqueue from an at-least-once upstream, DLQ replay causing re-duplication).\n\n## Required artifact\n\nInclude the job table as a fenced code block, columns + indexes, for example the *shape* (design your own):\n\n```sql\nCREATE TABLE jobs (\n  id           bigint PRIMARY KEY,\n  kind         text NOT NULL,\n  payload      jsonb NOT NULL,\n  dedup_key    text,                 -- your idempotency strategy\n  status       text NOT NULL,        -- e.g. queued|running|failed|dead|done\n  attempts     int  NOT NULL DEFAULT 0,\n  run_after     timestamptz NOT NULL, -- backoff / scheduling\n  locked_until  timestamptz,          -- lease / visibility timeout\n  -- ... indexes you rely on for the claim query\n);\n```\n\n## Ground rules\n\n- Be explicit about tradeoffs. A section that lists a technique without saying what it costs (throughput, latency, operational burden, correctness gaps) is incomplete.\n- If you assert \"exactly-once,\" you must show the mechanism end to end. Otherwise, own the at-least-once + idempotent-consumer contract.\n- State your assumptions where the prompt is silent (that is expected and rewarded).",
+    "rubric": {
+      "criteria": [
+        {
+          "id": "delivery_idempotency",
+          "weight": 1,
+          "requirement": "Correctly explains why the non-transactional side effect plus a crash window forces at-least-once (not exactly-once), and designs a concrete, workable idempotency/dedup mechanism (dedup keys, consumed-effects/idempotency table, provider idempotency keys, or upserts) that keeps handlers correct under duplicate delivery. Addresses the email case specifically. Does not falsely claim exactly-once without a valid end-to-end mechanism.",
+          "points_possible": 5
+        },
+        {
+          "id": "lifecycle_claim",
+          "weight": 1,
+          "requirement": "Presents a sound data model and enqueue/claim/execute/ack lifecycle with a safe concurrent-claim mechanism (e.g. FOR UPDATE SKIP LOCKED or lease/visibility-timeout) and a reclaim path for jobs whose worker crashed. Names the indexes the claim query depends on.",
+          "points_possible": 4
+        },
+        {
+          "id": "retries_poison",
+          "weight": 1,
+          "requirement": "Defines a defensible retry policy (backoff with jitter, max attempts), distinguishes retryable from terminal failures, and specifies a dead-letter path plus how jobs are replayed out of it. Notes the tradeoffs (e.g. retry storms, poison amplification).",
+          "points_possible": 4
+        },
+        {
+          "id": "ordering",
+          "weight": 1,
+          "requirement": "States the exact ordering guarantee (global/per-key/none), justifies it against throughput and latency, and explicitly reasons about head-of-line blocking and isolation between keys/tenants.",
+          "points_possible": 3
+        },
+        {
+          "id": "observability",
+          "weight": 1,
+          "requirement": "Specifies concrete signals (e.g. oldest-unacked age, DLQ depth, attempt histogram, per-kind failure rate), actionable alerts, and a realistic runbook for an on-call engineer to inspect and unstick a single failed job.",
+          "points_possible": 3
+        },
+        {
+          "id": "tradeoffs_failure_modes",
+          "weight": 1,
+          "requirement": "Enumerates at least four concrete failure scenarios (including crash-after-side-effect-before-ack and DB failover / vanished worker) with a specific mitigation for each, and surfaces honest limitations and tradeoffs rather than asserting a flawless design.",
+          "points_possible": 5
+        }
+      ]
+    },
+    "starter_files": [],
+    "tests": []
+  }
+]

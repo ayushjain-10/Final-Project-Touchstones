@@ -1,0 +1,106 @@
+{
+  "method": "EEOC four-fifths (80%) rule via complianceService.fourFifths; synthetic cohorts; seed 19780828",
+  "threshold": 60,
+  "min_group_sample": 5,
+  "scenarios": {
+    "blind": {
+      "flagged": false,
+      "min_impact_ratio": 0.87,
+      "reference": "Group A",
+      "groups": [
+        {
+          "value": "Group A",
+          "n": 500,
+          "selected": 326,
+          "rate": 0.652,
+          "sufficient": true,
+          "impact_ratio": 1
+        },
+        {
+          "value": "Group B",
+          "n": 500,
+          "selected": 285,
+          "rate": 0.57,
+          "sufficient": true,
+          "impact_ratio": 0.87
+        },
+        {
+          "value": "Group C",
+          "n": 500,
+          "selected": 302,
+          "rate": 0.604,
+          "sufficient": true,
+          "impact_ratio": 0.93
+        },
+        {
+          "value": "Group D",
+          "n": 500,
+          "selected": 303,
+          "rate": 0.606,
+          "sufficient": true,
+          "impact_ratio": 0.93
+        }
+      ]
+    },
+    "biased": {
+      "flagged": true,
+      "min_impact_ratio": 0.35,
+      "reference": "Group C",
+      "groups": [
+        {
+          "value": "Group A",
+          "n": 500,
+          "selected": 289,
+          "rate": 0.578,
+          "sufficient": true,
+          "impact_ratio": 0.93
+        },
+        {
+          "value": "Group B",
+          "n": 500,
+          "selected": 308,
+          "rate": 0.616,
+          "sufficient": true,
+          "impact_ratio": 0.99
+        },
+        {
+          "value": "Group C",
+          "n": 500,
+          "selected": 310,
+          "rate": 0.62,
+          "sufficient": true,
+          "impact_ratio": 1
+        },
+        {
+          "value": "Group D",
+          "n": 500,
+          "selected": 109,
+          "rate": 0.218,
+          "sufficient": true,
+          "impact_ratio": 0.35
+        }
+      ]
+    },
+    "small_n": {
+      "insufficient": true,
+      "groups": [
+        {
+          "value": "Majority",
+          "n": 120,
+          "selected": 73,
+          "rate": 0.6083,
+          "sufficient": true,
+          "impact_ratio": null
+        },
+        {
+          "value": "Tiny",
+          "n": 3,
+          "selected": null,
+          "rate": null,
+          "sufficient": false,
+          "impact_ratio": null
+        }
+      ]
+    }
+  }
+}
