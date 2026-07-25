@@ -13,8 +13,9 @@ pointers to the code that implements and evaluates the two feedback items.
 |------|-----------|
 | `report.pdf` | The written report (scientific-paper format, 11pt, single-spaced). Submit this. |
 | `report.html` | Source for the report (rendered to PDF with headless Chrome). |
-| `presentation-deck.pdf` | 9-slide deck for the 5-minute video. |
-| `presentation-deck.html` | Source for the deck. |
+| `Touchstones-Presentation.pptx` | **Editable PowerPoint** (9 slides, navy theme, each speaker's lines in the slide notes). Opens in PowerPoint, Keynote, or Google Slides. |
+| `presentation-deck.pdf` | Read-only PDF of the same deck (quick view). |
+| `presentation-deck.html` | HTML source for the PDF deck. |
 | `presentation-script.md` | Timed speaker script + the live-demo walkthrough. Record from this. |
 | `figures/` | The figures + the raw JSON the evals produced (reproducible). |
 
