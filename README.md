@@ -41,14 +41,20 @@ node eval/fairness-fourfifths.mjs       # fairness numbers + figure   -> backend
 npx jest tests/unit/calibrationService.spec.js tests/unit/complianceService.spec.js
 ```
 
-## Run the live demo
+## Run the live demo (interactive)
+
+Every panel calls the real backend services, so start both servers:
 
 ```bash
-cd frontend && npm install && npm run dev     # http://localhost:3000
+cd backend && npm install && npm start      # API on http://localhost:3001
+cd frontend && npm install && npm run dev   # app on http://localhost:3000
 ```
 
-Open **`http://localhost:3000/demo/features`** - a public, no-login page that renders the real
-calibration component at three points in a customer timeline plus the fairness panel.
+Open **`http://localhost:3000/demo/features`** (public, no login). Score a candidate submission and
+try to prompt-inject it (the code-computed score does not move and is flagged), drag the cold-start
+calibration slider, and edit subgroup counts to trip the four-fifths check. The scorer needs a
+grader key in `backend/.env` (see `.env.example`); calibration and fairness are pure and need none.
+Endpoints: `backend/src/routes/supabase/demo.js`.
 
 ## Layout
 

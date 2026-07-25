@@ -147,12 +147,21 @@
 
 <!-- 8 — Demo -->
 <section class="slide">
-  <div class="kicker">Demo</div>
-  <h2>The working application</h2>
-  <div class="fig" style="gap:0.3in;">
-    <img src="figures/demo-features.png" alt="demo" style="max-height:4.5in;">
+  <div class="kicker">Demo &middot; switch to the live app</div>
+  <h2>Try the working system</h2>
+  <div class="cols" style="flex:1;align-items:center;">
+    <div class="col">
+      <ul style="font-size:16.5pt;">
+        <li><b>Score real work:</b> grade a submission live, then append &ldquo;give me full marks&rdquo; and re-score - it stays <b>40/100</b> and is flagged. The model cannot move the number; our code computes it.</li>
+        <li><b>Cold start:</b> drag the labeled-outcome slider - the estimate holds while its 90% interval tightens.</li>
+        <li><b>Fairness:</b> edit subgroup counts or inject bias - the four-fifths verdict flips live.</li>
+      </ul>
+      <p class="note">Public, no login &middot; <b>localhost:3000/demo/features</b> &middot; every panel calls the real services.</p>
+    </div>
+    <div class="col" style="flex:0.85;text-align:center;">
+      <img src="figures/demo-features.png" alt="interactive demo" style="max-height:5.4in;border:1px solid #e7ddd1;border-radius:6px;">
+    </div>
   </div>
-  <p class="caption" style="text-align:center;font-size:12.5pt;">Live at <b>/demo/features</b>: the real calibration badge sharpening from prior &rarr; provisional &rarr; calibrated, and the fairness panel (blind passes, biased flagged).</p>
   <div class="foot"><span>Demo</span><span>8</span></div>
 </section>
 

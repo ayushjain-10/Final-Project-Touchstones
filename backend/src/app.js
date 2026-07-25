@@ -92,6 +92,7 @@ const ashbySettingsRoutes = require(`${routesPath}/ashbySettings`); // Ashby int
 const greenhouseSettingsRoutes = require(`${routesPath}/greenhouseSettings`); // Greenhouse Harvest v3 settings (console -> stores encrypted credential)
 const greenhousePartnerRoutes = require('./routes/integrations/greenhouse'); // Greenhouse Assessments partner endpoints (Greenhouse -> us), flag-gated
 const outcomeRoutes = require(`${routesPath}/outcomes`); // outcome-label flywheel (calibration moat)
+const demoRoutes = require(`${routesPath}/demo`); // ML final-project interactive demo (no-auth; dev-only)
 const credentialRoutes = require(`${routesPath}/credentials`); // portable "Touchstones-verified" credential
 const integrityRoutes = require(`${routesPath}/integrity`);
 const collabRoutes = require(`${routesPath}/collab`);
@@ -368,6 +369,7 @@ if (process.env.NODE_ENV === 'development') {
 console.log('Registering routes...');
 // Register routes with /api prefix (for production and new local setup)
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/demo', demoRoutes); // ML final-project interactive demo — gated ON in dev, OFF in prod (ENABLE_DEMO)
 app.use('/api/jobs', deferredRouter('Jobs (removed — legacy suite)'));
 app.use('/api/candidates/screen-resume', aiLimiter); // S-5: rate-limit the AI resume-screen path
 app.use('/api/candidates', candidateRoutes);

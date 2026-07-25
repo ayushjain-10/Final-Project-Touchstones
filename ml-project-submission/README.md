@@ -49,12 +49,17 @@ npx jest tests/unit/calibrationService.spec.js tests/unit/complianceService.spec
 
 ## Run the live demo (for the video)
 
+The demo is interactive: every panel calls the real backend services. Start both servers:
+
 ```bash
-cd frontend && npm install && npm run dev     # http://localhost:3000
+cd backend && npm install && npm start      # API on http://localhost:3001 (grader + services)
+cd frontend && npm install && npm run dev   # app on http://localhost:3000
 ```
-Open **http://localhost:3000/demo/features** - a public, no-login page that renders the real
-calibration component at three points in a customer timeline plus the fairness panel. See
-`presentation-script.md` for the exact walkthrough.
+Open **http://localhost:3000/demo/features** (public, no login). Score a candidate submission and
+try to prompt-inject it (the code-computed score does not move and is flagged), drag the cold-start
+calibration slider, and edit subgroup counts to trip the four-fifths check. See
+`presentation-script.md` for the exact walkthrough. The backend needs `backend/.env`
+(Anthropic/Azure grader key) for the scorer; calibration and fairness are pure and need no keys.
 
 ## Regenerate the PDFs from source
 

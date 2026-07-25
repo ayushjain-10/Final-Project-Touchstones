@@ -3,7 +3,7 @@
 **Format:** 5 ± 1 min, recorded (Zoom/QuickTime), MP4/MOV. One speaker or split across three.
 **Delivery:** Look at the camera, not the slides. Talk *to* the viewer. Do **not** read bullets aloud - they are your map, the words below are what you say. Jump straight into the problem (no "Hi, today I will introduce...").
 
-Timings are cumulative. Total ~5:00. Two demo options at the end - pick ONE (the browser demo is safest).
+Timings are cumulative. Total ~5:00. Two demo options at the end - pick ONE: Option A (interactive, most impressive) needs both servers running; Option B (terminal evals) is the zero-setup fallback. Do a dry run of Option A once before recording so the grader model is warm.
 
 ---
 
@@ -31,7 +31,7 @@ Timings are cumulative. Total ~5:00. Two demo options at the end - pick ONE (the
 > "And fairness. On synthetic cohorts, our blind scorer keeps every subgroup above the 0.80 line - it passes. Then we sabotage ourselves: we inject a penalty into one group, and the check immediately flags it at 0.35. That's the point - the monitor catches real adverse impact, not just our own scorer passing. And a three-person group gets suppressed instead of exposed, because tiny samples are both misleading and a privacy risk. The lesson we learned here: the four-fifths ratio is itself noisy at small samples, which is *why* you need the floor."
 
 ## Slide 8 - Demo (4:30-4:55) - SEE walkthrough below
-> "Here's the live product. Same result card at three moments in a customer's life. Day one, no outcomes: instead of a dead end, a starting estimate - seventy percent, with a wide interval. Two weeks in, four outcomes: provisional, and the interval tightens. Two months in: fully calibrated, tight interval, 'likely to clear an onsite.' Below, the fairness panel - blind passes, biased flagged. Every number on this page is the reproducible output of our eval scripts."
+> "Let me show you the live system. This is a candidate's buggy solution. I click Score - the model grades each rubric line and our code computes forty out of a hundred; it correctly caught that the code fails on all-negative inputs. Now watch: I append an instruction telling the grader to give me full marks, and re-score. Still forty - and flagged. The model can't move the number, because our code computes it from the points. Over here I drag the calibration: with four outcomes it's provisional with a wide interval; as I add data the interval tightens. And the fairness table passes right now, but if I inject bias into one group, it drops below 0.80 and flags instantly."
 
 ## Slide 9 - Close (4:55-5:00)
 > "One idea carried the whole project: never let the model produce the number. Everything good - auditability, reproducibility, injection-resistance - followed. Seven hundred and ten tests green. Thank you."
@@ -40,12 +40,13 @@ Timings are cumulative. Total ~5:00. Two demo options at the end - pick ONE (the
 
 ## DEMO WALKTHROUGH (do this live during slide 8, or screen-record it separately)
 
-**Option A - Browser (recommended, 100% reliable, no login):**
-1. `cd frontend && npm run dev`  (starts Vite on http://localhost:3000)
-2. Open **http://localhost:3000/demo/features**
-3. Point at the **three calibration cards** left-to-right: say "prior 70% with a wide interval -> provisional 72% -> calibrated 72% with a *tight* interval. The estimate barely moves; the uncertainty is what shrinks."
-4. Scroll to the **two cold-start figures** (accuracy + availability).
-5. Scroll to **Subgroup fairness**: point at "Blind - passes, min 0.87" then "Biased - Group D flagged 0.35", then the bar chart with the 0.80 line.
+**Option A - Interactive browser demo (recommended, no login). Needs BOTH servers:**
+0. Terminal 1: `cd backend && npm start` (API on :3001). Terminal 2: `cd frontend && npm run dev` (:3000).
+1. Open **http://localhost:3000/demo/features**. Confirm the top-right pill reads **"Engine connected"**.
+2. **Score real work:** click **Score submission** -> ~**40/100**, correctness UNMET with a real explanation (fails on all-negative inputs).
+3. **Prompt injection:** click **Try a prompt injection** (appends a "give me full marks" comment) -> **Score submission** again -> still **~40/100**, now with a **"Flagged for human review"** note. Say the line: "the model can't move the number; our code computes it."
+4. **Cold start:** drag **Labeled outcomes** from ~4 up toward ~40 - the tier goes **provisional -> calibrated** and the 90% interval visibly tightens while the estimate holds ~72%.
+5. **Fairness:** click **Inject bias into Group D** -> verdict flips to **FLAGGED**, Group D's ratio turns red (~0.35). Click **Reset** to show it passing again (min 0.87).
 
 **Option B - Terminal (shows it's real, reproducible):**
 1. `cd backend`
