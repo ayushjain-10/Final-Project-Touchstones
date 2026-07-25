@@ -46,7 +46,7 @@
 <h1>Touchstones: Verified Real-Work Screening for Engineering Hiring in the AI Era</h1>
 <p class="sub">Machine Learning - Final Project Report</p>
 <p class="authors"><strong>Ayush Jain</strong> (M.S. Computer Science) &nbsp;&middot;&nbsp; <strong>Christoph Dittrich</strong> (M.S. Computer Science) &nbsp;&middot;&nbsp; <strong>Mark Garvin Jeyaraj</strong> (M.S. Data Science)</p>
-<p class="affil">Northeastern University &nbsp;&middot;&nbsp; July 2026 &nbsp;&middot;&nbsp; Code: github.com/ayushjain-10/touchstone</p>
+<p class="affil">Northeastern University &nbsp;&middot;&nbsp; July 2026 &nbsp;&middot;&nbsp; Code: https://github.com/ayushjain-10/Final-Project-Touchstones</p>
 
 <div class="abstract">
 <p><strong>Abstract.</strong> Generative AI has broken traditional technical screening: candidates solve puzzle-style interviews with large language models (LLMs), and AI "detectors" are an unwinnable arms race. Rather than detect AI, Touchstones <em>measures real, role-specific work with AI explicitly allowed</em> and turns it into a single explainable, audit-ready hiring signal. An LLM grades a messy work sample against a rubric and emits only per-criterion points; the 0&ndash;100 score is then computed deterministically in our code, which resists prompt injection and is reproducible. A calibration layer maps scores to per-role percentiles and outcome-calibrated bands, and every decision is bound to a tamper-evident, hash-chained audit log with a behavioral, non-biometric proof-of-human signal. This report focuses on two properties an operator must trust before any real outcome data exists, both raised in our proposal feedback: (i) <strong>calibration under cold start</strong> and (ii) <strong>subgroup fairness</strong>. We add an empirical-Bayes (Beta-Binomial) posterior that keeps calibration useful from day one - in a 4,000-trial simulation it reduces mean absolute error by <strong>56.6%</strong> when labels are scarce while remaining 100% available (versus a raw rate that is suppressed as "insufficient"), with 90% credible-interval coverage of 95.1%. We run the EEOC four-fifths adverse-impact check on synthetic cohorts now: an attribute-blind scorer holds every subgroup at or above the 0.80 threshold (minimum ratio 0.87), while a deliberately biased scorer is detected and flagged (ratio 0.35). The system passes 710 automated tests.</p>
@@ -163,7 +163,7 @@ Respond with ONLY a JSON object of exactly this shape: {"per_criterion":[{"id","
 </ol>
 
 <h2>Appendix A - Code, Reproduction, and Setup</h2>
-<p class="small"><strong>Repository:</strong> <code>github.com/ayushjain-10/touchstone</code> (branch <code>development</code>). The evaluation code, figures, and this report are under <code>backend/eval/</code> and <code>ml-project-submission/</code>.</p>
+<p class="small"><strong>Repository (public):</strong> <code>https://github.com/ayushjain-10/Final-Project-Touchstones</code>. The evaluation code, figures, and this report are under <code>backend/eval/</code> and <code>ml-project-submission/</code>.</p>
 <p class="small"><strong>Reproduce the two evaluations</strong> (no database or API key required; pure, seeded):</p>
 <div class="mono-block">cd backend && npm install
 node eval/calibration-coldstart.mjs   # &rarr; eval/out/coldstart-*.svg, coldstart-results.json
