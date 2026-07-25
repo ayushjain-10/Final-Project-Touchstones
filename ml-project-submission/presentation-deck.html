@@ -7,42 +7,43 @@
   @page { size: 13.333in 7.5in; margin: 0; }
   * { box-sizing: border-box; }
   html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; font-family: "Helvetica Neue", Arial, system-ui, sans-serif; color: #1c1917; }
+  body { margin: 0; font-family: "Inter", "Helvetica Neue", Arial, system-ui, sans-serif; color: #111827; }
   .slide {
-    width: 13.333in; height: 7.5in; padding: 0.6in 0.75in; position: relative;
-    page-break-after: always; background: #FBF7F1; overflow: hidden; display: flex; flex-direction: column;
+    width: 13.333in; height: 7.5in; padding: 0.62in 0.78in; position: relative;
+    page-break-after: always; background: #FFFFFF; overflow: hidden; display: flex; flex-direction: column;
+    border-top: 9px solid #1F4E8C;
   }
   .slide:last-child { page-break-after: auto; }
-  .kicker { font-size: 13pt; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #B4552D; }
-  h1 { font-family: Georgia, serif; font-size: 40pt; line-height: 1.08; margin: 0.08in 0 0.12in; color:#1c1917; }
-  h2 { font-family: Georgia, serif; font-size: 30pt; line-height: 1.1; margin: 0.05in 0 0.14in; color:#1c1917; }
-  .lead { font-size: 18pt; line-height: 1.4; color: #44403c; max-width: 10in; }
-  ul { font-size: 17pt; line-height: 1.5; color: #292524; margin: 0.06in 0; padding-left: 0.32in; }
+  .kicker { font-size: 12.5pt; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #1F4E8C; }
+  h1 { font-weight: 800; font-size: 42pt; line-height: 1.05; letter-spacing: -0.6px; margin: 0.08in 0 0.12in; color:#0f172a; }
+  h2 { font-weight: 800; font-size: 30pt; line-height: 1.08; letter-spacing: -0.4px; margin: 0.05in 0 0.14in; color:#0f172a; }
+  .lead { font-size: 18pt; line-height: 1.4; color: #334155; max-width: 10in; }
+  ul { font-size: 17pt; line-height: 1.5; color: #1f2937; margin: 0.06in 0; padding-left: 0.32in; }
   li { margin-bottom: 0.09in; }
-  li b { color:#7a3d22; }
-  .foot { position: absolute; bottom: 0.34in; left: 0.75in; right: 0.75in; display:flex; justify-content:space-between; font-size: 10.5pt; color: #9a8f84; border-top:1px solid #e7ddd1; padding-top:6px; }
+  li b { color:#1F4E8C; }
+  .foot { position: absolute; bottom: 0.34in; left: 0.78in; right: 0.78in; display:flex; justify-content:space-between; font-size: 10.5pt; color: #94A3B8; border-top:1px solid #E5E7EB; padding-top:6px; }
   .fig { flex:1; display:flex; align-items:center; justify-content:center; gap: 0.4in; }
-  .fig img { max-height: 4.3in; max-width: 100%; border:1px solid #ece7e0; border-radius:6px; background:#fff; }
+  .fig img { max-height: 4.3in; max-width: 100%; border:1px solid #E5E7EB; border-radius:6px; background:#fff; }
   .cols { display:flex; gap:0.5in; align-items:flex-start; }
   .col { flex:1; }
-  .big { font-family: Georgia, serif; font-size: 46pt; color:#B4552D; line-height:1; }
+  .big { font-weight:800; font-size: 46pt; color:#1F4E8C; line-height:1; letter-spacing:-1px; }
   .stat { display:flex; gap:0.5in; margin-top:0.15in; }
-  .stat .n { font-family:Georgia,serif; font-size:34pt; color:#B4552D; line-height:1; }
-  .stat .l { font-size:12.5pt; color:#57534e; max-width:2.6in; margin-top:4px; }
-  .chip { display:inline-block; background:#f1e7de; color:#7a3d22; border-radius:999px; padding:2px 12px; font-size:12pt; font-weight:600; margin-right:6px; }
+  .stat .n { font-weight:800; font-size:34pt; color:#1F4E8C; line-height:1; letter-spacing:-0.5px; }
+  .stat .l { font-size:12.5pt; color:#475569; max-width:2.6in; margin-top:4px; }
+  .chip { display:inline-block; background:#E8EEF7; color:#1F4E8C; border-radius:999px; padding:2px 12px; font-size:12pt; font-weight:700; margin-right:6px; }
   .title-wrap { flex:1; display:flex; flex-direction:column; justify-content:center; }
   .logo { display:flex; align-items:center; gap:10px; }
-  .logo .mark { width:34px; height:34px; border-radius:9px; background:#B4552D; color:#fff; font-family:Georgia,serif; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:20px;}
-  .note { font-size:12.5pt; color:#78716c; margin-top:0.1in; }
-  .card { border:1px solid #e7ddd1; border-radius:10px; padding:0.2in 0.26in; background:#fff; }
-  .caption { font-size:11pt; color:#78716c; margin-top:6px; text-align:center; }
+  .logo .mark { width:34px; height:34px; border-radius:8px; background:#1F4E8C; color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; font-size:20px;}
+  .note { font-size:12.5pt; color:#64748B; margin-top:0.1in; }
+  .card { border:1px solid #E5E7EB; border-radius:10px; padding:0.2in 0.26in; background:#F8FAFC; }
+  .caption { font-size:11pt; color:#64748B; margin-top:6px; text-align:center; }
 </style>
 </head>
 <body>
 
 <!-- 1 — Title -->
 <section class="slide">
-  <div class="logo"><span class="mark">^</span><span style="font-family:Georgia,serif;font-weight:700;font-size:16pt;">Touchstones</span></div>
+  <div class="logo"><span class="mark">^</span><span style="font-weight:800;font-size:16pt;letter-spacing:-0.3px;">Touchstones</span></div>
   <div class="title-wrap">
     <div class="kicker">Machine Learning &middot; Final Project</div>
     <h1>Verified real-work screening<br>for engineering hiring in the AI era</h1>

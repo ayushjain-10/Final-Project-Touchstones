@@ -15,21 +15,21 @@
   .sub { text-align: center; font-style: italic; color: #44403c; font-size: 10.5pt; margin: 0 0 2pt; }
   .authors { text-align: center; font-size: 10.5pt; margin: 6pt 0 2pt; }
   .affil { text-align: center; font-size: 9.5pt; color: #57534e; margin: 0 0 10pt; }
-  h2 { font-size: 12pt; margin: 13pt 0 3pt; border-bottom: 1.2px solid #C0603A; padding-bottom: 2pt; color:#7a3d22; }
+  h2 { font-size: 12pt; margin: 13pt 0 3pt; border-bottom: 1px solid #333; padding-bottom: 2pt; color:#000; }
   h3 { font-size: 10.8pt; margin: 8pt 0 2pt; color:#1c1917; }
   p { margin: 0 0 5pt; text-align: justify; }
-  .abstract { font-size: 10pt; margin: 4pt 2em 8pt; padding: 7pt 12pt; background: #faf6f1; border-left: 3px solid #C0603A; }
+  .abstract { font-size: 10pt; margin: 4pt 2em 8pt; padding: 7pt 12pt; background: #f4f4f5; border-left: 3px solid #333; }
   .abstract p { text-align: justify; }
   figure { margin: 8pt 0; text-align: center; page-break-inside: avoid; }
-  figure img { width: 100%; max-width: 6.4in; border: 1px solid #ece7e0; border-radius: 4px; }
+  figure img { width: 100%; max-width: 6.4in; border: 1px solid #dddddd; border-radius: 4px; }
   figure.screenshot img { max-width: 5.3in; }
   figcaption { font-size: 8.8pt; color: #57534e; margin-top: 3pt; text-align: left; }
   table { border-collapse: collapse; width: 100%; font-size: 9.2pt; margin: 6pt 0; }
-  th, td { border: 1px solid #ded7cd; padding: 3pt 6pt; text-align: right; }
+  th, td { border: 1px solid #cccccc; padding: 3pt 6pt; text-align: right; }
   th:first-child, td:first-child { text-align: left; }
-  thead th { background: #f3ede5; }
-  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background:#f5f1ea; padding:0 2px; border-radius:3px; }
-  .mono-block { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.4pt; line-height:1.32; background:#faf7f2; border:1px solid #ece7e0; border-radius:4px; padding:7pt 9pt; white-space:pre-wrap; margin:4pt 0 7pt; }
+  thead th { background: #eef0f2; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background:#f0f0f2; padding:0 2px; border-radius:3px; }
+  .mono-block { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.4pt; line-height:1.32; background:#f6f7f9; border:1px solid #dddddd; border-radius:4px; padding:7pt 9pt; white-space:pre-wrap; margin:4pt 0 7pt; }
   ol.refs { font-size: 9.2pt; padding-left: 1.4em; line-height:1.3; }
   ol.refs li { margin-bottom: 2.5pt; }
   .two { column-count: 2; column-gap: 16pt; }
@@ -38,7 +38,7 @@
   ul.tight { margin: 2pt 0 6pt; padding-left: 1.2em; }
   ul.tight li { margin-bottom: 2pt; text-align: justify; }
   .nobreak { page-break-inside: avoid; }
-  hr.sec { border:0; border-top:1px solid #e7e0d6; margin:10pt 0; }
+  hr.sec { border:0; border-top:1px solid #dddddd; margin:10pt 0; }
 </style>
 </head>
 <body>
@@ -87,7 +87,7 @@
 <p>Figure 1 and Table 1 quantify the gain. When labels are scarce (n = 2, 4, 6 per band) the shrunk posterior's mean absolute error is 8.71 percentage points (pp) versus 20.07 pp for the raw selected/n rate - a <strong>56.6% error reduction</strong> - because shrinkage trades a small bias for a large variance reduction exactly where the raw rate is wildest. The two estimators converge as data accrues (by n=120 they are within 0.1 pp), so shrinkage never distorts a well-sampled band. At n=0 the raw band is undefined; the prior estimate still lands within 5.33 pp of the truth. Crucially for the feedback, the raw band is <em>suppressed</em> (unavailable, shown as "insufficient") for every band below the eight-outcome floor, whereas the shrunk estimate is available 100% of the time, tiered by confidence (Figure 2). Averaged across the grid, the 90% credible interval covers the truth 95.1% of the time - slightly conservative, which is the honest direction to err.</p>
 
 <figure class="nobreak"><img src="figures/coldstart-accuracy.svg" alt="Cold-start accuracy">
-<figcaption><strong>Figure 1.</strong> Mean absolute error of the advance-rate estimate versus number of labeled outcomes in a band (4,000 trials/band). The empirical-Bayes posterior (terracotta) is far more accurate than the raw rate (grey) when data is scarce and converges to it as labels accrue. Lower is better.</figcaption></figure>
+<figcaption><strong>Figure 1.</strong> Mean absolute error of the advance-rate estimate versus number of labeled outcomes in a band (4,000 trials/band). The empirical-Bayes posterior (blue) is far more accurate than the raw rate (grey) when data is scarce and converges to it as labels accrue. Lower is better.</figcaption></figure>
 
 <figure class="nobreak"><img src="figures/coldstart-availability.svg" alt="Cold-start availability">
 <figcaption><strong>Figure 2.</strong> Share of bands that yield a decision-ready estimate. The raw band is suppressed as "insufficient" until it has eight labeled outcomes; the shrunk estimate is always available, tiered prior &rarr; provisional &rarr; calibrated. This is the direct fix for the "insufficient data triggers too often" concern.</figcaption></figure>
@@ -108,7 +108,7 @@
 <p>Figure 4 and Table 2 report the four-fifths check on synthetic cohorts. Under attribute-blind scoring, all four subgroups sit at or above the threshold (impact ratios 0.87&ndash;1.00; minimum 0.87), and the monitor does <em>not</em> flag - consistent with the design claim that rubric-anchored, attribute-blind scoring does not induce disparate selection by construction. When we inject a systematic penalty into one subgroup's scores, its selection rate collapses and the monitor flags it at an impact ratio of 0.35, well below 0.80 - evidence that the check detects real adverse impact, not just that our own scorer happens to pass. A third scenario confirms the privacy floor: a three-person subgroup is suppressed and reported as insufficient rather than exposing an individual's outcome. We also observed that the ratio is itself noisy at small samples (at n&approx;150 an identically-distributed group can dip below 0.80 by chance), which is precisely why the sample floor and honest small-n handling exist; the reported run uses n=500 per group.</p>
 
 <figure class="nobreak"><img src="figures/fairness-fourfifths.svg" alt="Adverse-impact ratios">
-<figcaption><strong>Figure 4.</strong> Adverse-impact ratio by subgroup. Blind scoring (terracotta) holds every subgroup at or above the 0.80 four-fifths threshold; penalizing Group D (a counterfactual biased scorer, sand) drops it to 0.35 and the monitor flags it (brick). Impact ratio = group selection rate &divide; the highest group's rate.</figcaption></figure>
+<figcaption><strong>Figure 4.</strong> Adverse-impact ratio by subgroup. Blind scoring (blue) holds every subgroup at or above the 0.80 four-fifths threshold; penalizing Group D (a counterfactual biased scorer, steel) drops it to 0.35 and the monitor flags it (red). Impact ratio = group selection rate &divide; the highest group's rate.</figcaption></figure>
 
 <table class="nobreak"><caption style="caption-side:top;text-align:left;font-size:8.8pt;color:#57534e;margin-bottom:3pt;"><strong>Table 2.</strong> Four-fifths results on synthetic cohorts (n=500/group). Flag fires when any impact ratio &lt; 0.80.</caption>
 <thead><tr><th>Scenario</th><th>Group A</th><th>Group B</th><th>Group C</th><th>Group D</th><th>Flagged?</th></tr></thead>
@@ -143,7 +143,7 @@ Respond with ONLY a JSON object of exactly this shape: {"per_criterion":[{"id","
 <ul class="tight">
 <li><strong>Task framing:</strong> "Read the codebase and the proposal PDF. My instructor's feedback: plan for the cold-start period so the 'insufficient data' fallback doesn't trigger too often; and run subgroup fairness (four-fifths) checks as early as possible, even on synthetic data. Fix the product and make it presentable."</li>
 <li><strong>Coding (cold start):</strong> "In <code>calibrationService.js</code>, add an empirical-Bayes Beta-Binomial posterior that shrinks a band's advance rate toward a documented per-band prior, returns a confidence tier (prior/provisional/calibrated) and a 90% credible interval, and stays additive so the existing 51 tests keep passing. Implement the regularized incomplete beta and its inverse without external dependencies and unit-test them against known values."</li>
-<li><strong>Coding (fairness):</strong> "Write a seeded, offline harness that runs the production <code>fourFifths()</code> over synthetic subgroups: a blind scorer that should pass, a counterfactual biased scorer that should be flagged below 0.80, and a small-n group that should be suppressed. Emit a JSON result and an SVG figure in the terracotta/ink palette."</li>
+<li><strong>Coding (fairness):</strong> "Write a seeded, offline harness that runs the production <code>fourFifths()</code> over synthetic subgroups: a blind scorer that should pass, a counterfactual biased scorer that should be flagged below 0.80, and a small-n group that should be suppressed. Emit a JSON result and an SVG figure in a clean, non-branded palette."</li>
 <li><strong>Debugging:</strong> "The blind-scorer scenario flags at n=150 from sampling noise. Explain whether that is a bug or a property of the four-fifths ratio, and choose a cohort size that demonstrates the fair case cleanly without seed-hunting."</li>
 <li><strong>Explanation/research:</strong> "Summarize how empirical-Bayes shrinkage and binomial credible intervals apply to calibrating small-sample selection rates, and which classic references to cite."</li>
 <li><strong>Product/UI:</strong> "Make the cold-start estimate visible in the real <code>CalibrationBadge</code> component and build a public, no-auth demo route rendering the three tiers plus the fairness panel, so the working app can be screen-recorded."</li>

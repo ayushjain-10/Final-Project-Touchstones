@@ -9,15 +9,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-// ── Palette (terracotta / ink; no green) ──
+// ── Palette: neutral academic (blue primary, slate baseline, red flag). Deliberately NOT the
+// product's terracotta so the paper/deck figures read as a plain report, not brand collateral.
+// Key names are kept for stability; the values are what changed.
 export const COLORS = {
-  ink: '#1C1917',
-  clay: '#B4552D',
-  brick: '#8C2F1D',
-  sand: '#B9AC98',
-  gray: '#9A8F84',
-  grid: '#EDE8E1',
-  axis: '#57534E',
+  ink: '#111827', // near-black (axis emphasis, reference lines, value labels)
+  clay: '#1F4E8C', // PRIMARY blue (shrinkage estimate / blind scorer / "good")
+  brick: '#B42318', // red (flagged / adverse impact)
+  sand: '#94A3B8', // steel/slate (secondary bar series)
+  gray: '#64748B', // slate-gray (raw/baseline line)
+  grid: '#E5E7EB', // light gray gridlines
+  axis: '#475569', // slate axis + tick labels
   paper: '#FFFFFF',
 };
 
